@@ -121,33 +121,53 @@ def filtering_page():
     quality_opts = ["Tous", "Vide", "<50c", "50-200c", ">200c"]
     q_filter = st.sidebar.selectbox("Qualité description", quality_opts, key="qual_filter")
 
-    all_types = [
-        r[0]
-        for r in conn.execute(
-            "SELECT DISTINCT product_type FROM products WHERE product_type IS NOT NULL AND product_type != '' ORDER BY product_type"
-        ).fetchall()
-    ]
-    t_filter = st.sidebar.multiselect("Type de produit", all_types, key="type_filter")
-
-    all_vendors = [
-        r[0]
-        for r in conn.execute(
-            "SELECT DISTINCT vendor FROM products WHERE vendor IS NOT NULL AND vendor != '' ORDER BY vendor"
-        ).fetchall()
-    ]
-    v_filter = st.sidebar.multiselect("Marque", all_vendors, key="vendor_filter")
-
-    conditions = ["1=1"]
-    params = []
-
+    # Build base conditions from quality filter
     qual_map = {
         "Vide": "(p.description IS NULL OR p.description = '')",
         "<50c": "(LENGTH(p.description) < 50 AND p.description IS NOT NULL AND p.description != '')",
         "50-200c": "(LENGTH(p.description) >= 50 AND LENGTH(p.description) < 200 AND p.description IS NOT NULL AND p.description != '')",
         ">200c": "(LENGTH(p.description) >= 200 AND p.description IS NOT NULL AND p.description != '')",
     }
+
+    base_conditions = ["1=1"]
+    base_params = []
     if q_filter != "Tous":
-        conditions.append(qual_map[q_filter])
+        base_conditions.append(qual_map[q_filter])
+
+    # Types filtered by quality
+    all_types = [
+        r[0]
+        for r in conn.execute(
+            f"SELECT DISTINCT p.product_type FROM products p WHERE {' AND '.join(base_conditions)} AND p.product_type IS NOT NULL AND p.product_type != '' ORDER BY p.product_type"
+        ).fetchall()
+    ]
+    t_filter = st.sidebar.multiselect("Type de produit", all_types, key="type_filter")
+
+    # Reset vendor selection when type filter changes
+    prev_types = st.session_state.get("_prev_types", [])
+    if t_filter != prev_types:
+        st.session_state["vendor_filter"] = []
+    st.session_state["_prev_types"] = t_filter
+
+    # Vendors filtered by quality + type
+    vendor_conditions = base_conditions.copy()
+    vendor_params = base_params.copy()
+    if t_filter:
+        ph = ", ".join(["?"] * len(t_filter))
+        vendor_conditions.append(f"p.product_type IN ({ph})")
+        vendor_params.extend(t_filter)
+
+    all_vendors = [
+        r[0]
+        for r in conn.execute(
+            f"SELECT DISTINCT p.vendor FROM products p WHERE {' AND '.join(vendor_conditions)} AND p.vendor IS NOT NULL AND p.vendor != '' ORDER BY p.vendor",
+            vendor_params,
+        ).fetchall()
+    ]
+    v_filter = st.sidebar.multiselect("Marque", all_vendors, key="vendor_filter")
+
+    conditions = base_conditions.copy()
+    params = base_params.copy()
 
     if t_filter:
         ph = ", ".join(["?"] * len(t_filter))
