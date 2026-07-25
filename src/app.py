@@ -7,6 +7,7 @@ import streamlit as st
 import pandas as pd
 
 from db import get_connection, close as db_close
+from llm_client import enrich_product
 
 st.set_page_config(page_title="Volteyr — Catalogue Produits", layout="wide")
 
@@ -259,12 +260,127 @@ def filtering_page():
     db_close()
 
 
+def enrichment_page():
+    st.header("Enrichissement IA")
+    conn = get_connection()
+
+    products_df = conn.execute(
+        "SELECT product_id, product_type, vendor, description FROM products ORDER BY product_id"
+    ).fetchdf()
+
+    product_ids = products_df["product_id"].tolist()
+    selected_id = st.selectbox("Produit à enrichir", product_ids, format_func=lambda x: f"#{x}")
+
+    product = products_df[products_df["product_id"] == selected_id].iloc[0]
+
+    col1, col2 = st.columns(2)
+    with col1:
+        st.markdown("**Type:** " + str(product["product_type"] or ""))
+        st.markdown("**Marque:** " + str(product["vendor"] or ""))
+        st.markdown("**Description originale:**")
+        st.info(product["description"] or "(vide)")
+
+    if st.button("Enrichir un test", type="primary"):
+        with st.spinner("Appel à Ollama..."):
+            result = enrich_product(
+                product["description"], product["product_type"], product["vendor"]
+            )
+
+        if result is None:
+            st.error("Échec de l'enrichissement — Ollama n'a pas retourné de réponse valide.")
+            st.session_state["_enrich_test_ok"] = False
+        else:
+            st.session_state["_enrich_result"] = result
+            st.session_state["_enrich_test_ok"] = True
+
+            st.subheader("Résultat")
+            c1, c2 = st.columns(2)
+            with c1:
+                st.markdown("**Description originale**")
+                st.info(product["description"] or "(vide)")
+            with c2:
+                st.markdown("**Description enrichie**")
+                st.success(result.get("enriched_description", ""))
+
+            attrs = {
+                "MATIÈRE": result.get("material", ""),
+                "ENTRETIEN": result.get("care_instructions", ""),
+                "STYLE": result.get("style", ""),
+                "SEO": result.get("seo_keywords", ""),
+            }
+            for label, val in attrs.items():
+                if val:
+                    st.markdown(f"**{label}**")
+                    st.write(val)
+
+    if st.session_state.get("_enrich_test_ok"):
+        st.divider()
+        st.subheader("Traitement par lot")
+        sel_ids = st.session_state.get("sel_ids", set())
+        n_sel = len(sel_ids)
+        if n_sel == 0:
+            st.warning("Aucun produit sélectionné dans la page Filtrage.")
+        else:
+            if st.button(f"Enrichir la sélection ({n_sel} produits)", type="secondary"):
+                progress_bar = st.progress(0, text="Préparation...")
+                status = st.status("Traitement en cours...", expanded=True)
+
+                enriched = 0
+                failed = 0
+                failed_ids = []
+                total = len(sel_ids)
+
+                for i, pid in enumerate(sorted(sel_ids)):
+                    row = conn.execute(
+                        "SELECT product_type, vendor, description FROM products WHERE product_id = ?",
+                        [pid],
+                    ).fetchone()
+                    if row is None:
+                        failed += 1
+                        failed_ids.append(pid)
+                        continue
+
+                    progress_bar.progress((i + 1) / total, text=f"{i+1}/{total} — #{pid}")
+                    status.write(f"Traitement #{pid}...")
+
+                    result = enrich_product(row[2], row[0], row[1])
+                    if result is None:
+                        failed += 1
+                        failed_ids.append(pid)
+                        status.write(f"⚠️ Échec #{pid}")
+                    else:
+                        conn.execute(
+                            """INSERT OR REPLACE INTO enrichissements
+                            (product_id, enriched_description, material, care_instructions, style, seo_keywords, model_used)
+                            VALUES (?, ?, ?, ?, ?, ?, ?)""",
+                            [pid,
+                             result.get("enriched_description", ""),
+                             result.get("material", ""),
+                             result.get("care_instructions", ""),
+                             result.get("style", ""),
+                             result.get("seo_keywords", ""),
+                             MODEL],
+                        )
+                        enriched += 1
+                        status.write(f"✅ #{pid} enrichi")
+
+                progress_bar.empty()
+                status.update(label=f"Terminé — {enriched}/{total} enrichis, {failed} échecs", state="complete")
+                if failed_ids:
+                    with status:
+                        st.error(f"IDs en échec : {failed_ids}")
+
+    db_close()
+
+
 st.sidebar.title("Volteyr")
 page = st.sidebar.selectbox(
-    "Navigation", ["Tableau de bord", "Filtrage et export"], key="nav"
+    "Navigation", ["Tableau de bord", "Filtrage et export", "Enrichissement"], key="nav"
 )
 
 if page == "Tableau de bord":
     dashboard_page()
+elif page == "Enrichissement":
+    enrichment_page()
 else:
     filtering_page()
