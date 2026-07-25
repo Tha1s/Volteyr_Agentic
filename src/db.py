@@ -23,18 +23,13 @@ def _init_schema(conn):
             vendor VARCHAR,
             inventory_quantity BIGINT,
             gross_amount_exc_tax_product DOUBLE,
-            description VARCHAR
-        )
-    """)
-    conn.execute("""
-        CREATE TABLE IF NOT EXISTS enrichissements (
-            product_id BIGINT PRIMARY KEY,
+            description VARCHAR,
             enriched_description VARCHAR,
             material VARCHAR,
             care_instructions VARCHAR,
             style VARCHAR,
             seo_keywords VARCHAR,
-            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            enriched_at TIMESTAMP,
             model_used VARCHAR
         )
     """)

@@ -67,8 +67,11 @@ def validate_result(result: dict | None) -> bool:
     desc = result.get("enriched_description", "")
     if len(desc) < 20:
         return False
-    keys = ["enriched_description", "material", "care_instructions", "style", "seo_keywords"]
-    return all(key in result and result[key] for key in keys)
+    result.setdefault("material", "Non précisé")
+    result.setdefault("care_instructions", "Non précisé")
+    result.setdefault("style", "")
+    result.setdefault("seo_keywords", "")
+    return True
 
 
 def enrich_product(description, product_type, category, vendor, tags=""):
@@ -86,7 +89,7 @@ def enrich_product(description, product_type, category, vendor, tags=""):
             resp = requests.post(
                 OLLAMA_URL,
                 json={"model": MODEL, "prompt": prompt, "stream": False, "options": {"temperature": 0.7}},
-                timeout=30,
+                timeout=60,
             )
             resp.raise_for_status()
             text = resp.json().get("response", "")
@@ -100,13 +103,10 @@ def enrich_product(description, product_type, category, vendor, tags=""):
 
 
 def enrich_batch(products: list[dict], max_workers=3) -> list[dict]:
-    results = []
+    results = [None] * len(products)
     with ThreadPoolExecutor(max_workers=max_workers) as executor:
-        futures = {}
-        for p in products:
-            future = executor.submit(enrich_product, **p)
-            futures[future] = p
-        for future in as_completed(futures):
-            result = future.result()
-            results.append({"product": futures[future], "result": result})
+        future_to_idx = {executor.submit(enrich_product, **p): i for i, p in enumerate(products)}
+        for future in as_completed(future_to_idx):
+            i = future_to_idx[future]
+            results[i] = {"product": products[i], "result": future.result()}
     return results

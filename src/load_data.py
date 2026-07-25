@@ -29,14 +29,14 @@ def parse_and_load():
             ))
 
     conn.executemany(
-        "INSERT INTO products VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
+        """INSERT INTO products (
+            product_id, product_type, category, product_tags, images_array,
+            vendor, inventory_quantity, gross_amount_exc_tax_product, description
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)""",
         rows,
     )
 
     print(f"✅ {len(rows)} produits chargés dans products")
-
-    count_enrich = conn.execute("SELECT COUNT(*) FROM enrichissements").fetchone()[0]
-    print(f"📦 enrichissements : {count_enrich} lignes")
 
 if __name__ == "__main__":
     parse_and_load()
