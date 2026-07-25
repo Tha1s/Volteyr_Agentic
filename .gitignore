@@ -1,3 +1,7 @@
 context.md
 .opencode/
 opencode.jsonc
+conversations/
+.venv/
+aidd_docs/
+AGENTS.md
