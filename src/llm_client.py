@@ -4,30 +4,37 @@ import requests
 OLLAMA_URL = "http://localhost:11434/api/generate"
 MODEL = "qwen2.5:1.5b"
 
-ENRICHMENT_PROMPT = """You are a product description writer for a luxury fashion e-commerce store.
-The products are sold in France and the descriptions must be in French.
+ENRICHMENT_PROMPT = """You are a product description writer for a fashion e-commerce store.
+Products are sold in France — all output must be in French.
 
-Product category: {category}
-Specific type: {product_type}
+Product type: {product_type}
+Category: {category}
+Tags: {tags}
 Brand: {vendor}
 Original description: {description}
 
-Generate the following sections in French:
+CRITICAL INSTRUCTIONS:
+- Never invent information. If the original text does not mention material, care instructions, or specific details, state "Non précisé" instead of guessing.
+- Always include the specific product type in the first sentence (e.g., "Ce poncho...", "Cette robe...", "Ce T-shirt...").
+- Tone: chic and elegant but accessible — not overly luxurious.
+- Only use details present in the original description. Do not add fictional features.
+
+Generate these sections in French:
 
 [DESCRIPTION]
-Write an improved 2-3 sentence product description in French. Make it appealing and informative.
+Follow this structure: the specific product type with key features. A sentence about style or usage. Material information if known.
 
 [MATIERE]
-Write a short material / fabric description in French (1 sentence). If you don't know the exact material, describe what it looks like.
+One sentence about material. If unknown: "Matière non précisée."
 
 [ENTRETIEN]
-Write short care instructions in French (1 sentence). If you don't know, suggest general care.
+One sentence about care. If unknown: "Entretien non précisé."
 
 [STYLE]
-Write a short styling tip in French (1 sentence about how to wear this item).
+One short styling tip.
 
 [SEO]
-List 5-10 comma-separated SEO keywords in French. Include the product type and brand."""
+5-10 comma-separated French SEO keywords. Always include: {brand}, {category}, {product_type}."""
 
 
 def parse_enrichment(text):
@@ -46,12 +53,13 @@ def parse_enrichment(text):
     return sections if sections else None
 
 
-def enrich_product(description, product_type, category, vendor):
+def enrich_product(description, product_type, category, vendor, tags=""):
     if not description:
         description = "(aucune description disponible)"
     prompt = ENRICHMENT_PROMPT.format(
         product_type=product_type or "Non spécifié",
         category=category or "Non spécifié",
+        tags=tags or "Non spécifié",
         vendor=vendor or "Non spécifié",
         description=description,
     )

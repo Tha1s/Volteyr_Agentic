@@ -256,6 +256,61 @@ def filtering_page():
                 "text/csv",
                 use_container_width=True,
             )
+
+            # Batch enrichment in filtering page
+            st.sidebar.markdown("---")
+            st.sidebar.markdown("### Enrichissement")
+            sel_ids = st.session_state.get("sel_ids", set())
+            n_sel = len(sel_ids)
+            if n_sel > 0:
+                if st.sidebar.button(f"Enrichir la sélection ({n_sel})", use_container_width=True):
+                    progress_bar = st.progress(0, text="Préparation...")
+                    status = st.status("Enrichissement en cours...", expanded=True)
+
+                    enriched = 0
+                    failed = 0
+                    failed_ids = []
+                    total = len(sel_ids)
+
+                    for i, pid in enumerate(sorted(sel_ids)):
+                        row = conn.execute(
+                            "SELECT category, product_type, vendor, description, product_tags FROM products WHERE product_id = ?",
+                            [pid],
+                        ).fetchone()
+                        if row is None:
+                            failed += 1
+                            failed_ids.append(pid)
+                            continue
+
+                        result = enrich_product(
+                            description=row[3] or "",
+                            product_type=row[1] or "",
+                            vendor=row[2] or "",
+                            category=row[0] or "",
+                            tags=row[4] or "",
+                        )
+
+                        if result:
+                            conn.execute(
+                                """INSERT OR REPLACE INTO enrichissements
+                                (product_id, enriched_description, material, care_instructions, style, seo_keywords, created_at, model_used)
+                                VALUES (?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP, ?)""",
+                                [pid, result.get("enriched_description"), result.get("material"),
+                                 result.get("care_instructions"), result.get("style"),
+                                 result.get("seo_keywords"), "qwen2.5:1.5b"],
+                            )
+                            enriched += 1
+                        else:
+                            failed += 1
+                            failed_ids.append(pid)
+
+                        progress_bar.progress((i + 1) / total, text=f"{i+1}/{total} — {enriched} OK, {failed} échecs")
+
+                    status.update(label=f"Terminé — {enriched} enrichis, {failed} échecs", state="complete" if failed == 0 else "error")
+                    if failed_ids:
+                        st.sidebar.error(f"Échecs: {failed_ids}")
+            else:
+                st.sidebar.info("Sélectionnez des produits dans le tableau pour les enrichir")
     else:
         st.sidebar.warning("Aucun produit sélectionné")
 
@@ -286,7 +341,11 @@ def enrichment_page():
     if st.button("Enrichir un test", type="primary"):
         with st.spinner("Appel à Ollama..."):
             result = enrich_product(
-                product["description"], product["product_type"], product["category"], product["vendor"]
+                description=product["description"],
+                product_type=product["product_type"],
+                vendor=product["vendor"],
+                category=product["category"],
+                tags=product["product_tags"],
             )
 
         if result is None:
@@ -316,62 +375,7 @@ def enrichment_page():
                     st.markdown(f"**{label}**")
                     st.write(val)
 
-    if st.session_state.get("_enrich_test_ok"):
-        st.divider()
-        st.subheader("Traitement par lot")
-        sel_ids = st.session_state.get("sel_ids", set())
-        n_sel = len(sel_ids)
-        if n_sel == 0:
-            st.warning("Aucun produit sélectionné dans la page Filtrage.")
-        else:
-            if st.button(f"Enrichir la sélection ({n_sel} produits)", type="secondary"):
-                progress_bar = st.progress(0, text="Préparation...")
-                status = st.status("Traitement en cours...", expanded=True)
 
-                enriched = 0
-                failed = 0
-                failed_ids = []
-                total = len(sel_ids)
-
-                for i, pid in enumerate(sorted(sel_ids)):
-                    row = conn.execute(
-                        "SELECT product_type, category, vendor, description FROM products WHERE product_id = ?",
-                        [pid],
-                    ).fetchone()
-                    if row is None:
-                        failed += 1
-                        failed_ids.append(pid)
-                        continue
-
-                    progress_bar.progress((i + 1) / total, text=f"{i+1}/{total} — #{pid}")
-                    status.write(f"Traitement #{pid}...")
-
-                    result = enrich_product(row[3], row[0], row[1], row[2])
-                    if result is None:
-                        failed += 1
-                        failed_ids.append(pid)
-                        status.write(f"⚠️ Échec #{pid}")
-                    else:
-                        conn.execute(
-                            """INSERT OR REPLACE INTO enrichissements
-                            (product_id, enriched_description, material, care_instructions, style, seo_keywords, model_used)
-                            VALUES (?, ?, ?, ?, ?, ?, ?)""",
-                            [pid,
-                             result.get("enriched_description", ""),
-                             result.get("material", ""),
-                             result.get("care_instructions", ""),
-                             result.get("style", ""),
-                             result.get("seo_keywords", ""),
-                             MODEL],
-                        )
-                        enriched += 1
-                        status.write(f"✅ #{pid} enrichi")
-
-                progress_bar.empty()
-                status.update(label=f"Terminé — {enriched}/{total} enrichis, {failed} échecs", state="complete")
-                if failed_ids:
-                    with status:
-                        st.error(f"IDs en échec : {failed_ids}")
 
     db_close()
 
