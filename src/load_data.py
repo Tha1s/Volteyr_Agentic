@@ -2,6 +2,7 @@ import csv
 import os
 
 from db import get_connection, close
+from normalize_types import normalize_product_type
 
 CSV_PATH = os.path.join(os.path.dirname(os.path.dirname(__file__)), "data", "products.csv")
 
@@ -16,7 +17,7 @@ def parse_and_load():
         for row in reader:
             rows.append((
                 int(row["product_id"]),
-                row["product_type"],
+                normalize_product_type(row["product_type"]),
                 row["product_tags"],
                 row["images_array"],
                 row["vendor"],

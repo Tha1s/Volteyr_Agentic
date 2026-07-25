@@ -1,0 +1,229 @@
+import duckdb
+import os
+
+NORMALIZE_MAP = {
+    'Pantalon': 'Pantalons',
+    'Pants': 'Pantalons',
+    'Trouser': 'Pantalons',
+    'T-Shirt': 'T-Shirts',
+    'T-shirt': 'T-Shirts',
+    'T Shirt': 'T-Shirts',
+    'TEE SHIRT': 'T-Shirts',
+    'Tees': 'T-Shirts',
+    'Tshirts': 'T-Shirts',
+    'Veste': 'Vestes',
+    'Jacket': 'Vestes',
+    'JACKET': 'Vestes',
+    'JACKETS': 'Vestes',
+    'Coats': 'Vestes',
+    'Suit jackets': 'Vestes',
+    'Manteau': 'Manteaux',
+    'Pull': 'Pulls',
+    'PULL': 'Pulls',
+    'Pullovers': 'Pulls',
+    'Sweaters': 'Pulls',
+    'Turtleneck Sweaters': 'Pulls',
+    'Pulls Col Rond': 'Pulls',
+    'Pulls Col Roulé': 'Pulls',
+    'Pulls Col V': 'Pulls',
+    'Pulls Cols Ronds': 'Pulls',
+    'Bague': 'Bagues',
+    'Bracelet': 'Bracelets',
+    'Bracelets Et Joncs': 'Bracelets',
+    'Créoles': "Boucles D'Oreilles",
+    'Mono boucle': "Boucles D'Oreilles",
+    "Boucles d'Oreilles": "Boucles D'Oreilles",
+    "Boucles d'oreilles": "Boucles D'Oreilles",
+    'Boucles D\u2019Oreilles': "Boucles D'Oreilles",
+    'Chemises & Tops': 'Chemises Et Tops',
+    'Chemises Et Top': 'Chemises Et Tops',
+    'Chemises / Blouses': 'Chemises',
+    'Blouses Et Chemises': 'Chemises',
+    'Chemises Et T-Shirts': 'Chemises Et Tops',
+    'T-Shirts Et Chemises': 'Chemises Et Tops',
+    'SHIRT': 'Chemises',
+    'Shirts': 'Chemises',
+    'Chemise': 'Chemises',
+    'CARDIGAN': 'Cardigans',
+    'Wrap cardigans': 'Cardigans',
+    'SWEATSHIRT': 'Sweats',
+    'Sweatshirt': 'Sweats',
+    'Sweatshirts': 'Sweats',
+    'Hoodies': 'Sweats',
+    'Sweat-shirt': 'Sweats',
+    'ROBE': 'Robes',
+    'Dress': 'Robes',
+    'Midi dresses': 'Robes',
+    'Short dresses': 'Robes',
+    'Gowns': 'Robes',
+    'JUPE': 'Jupes',
+    'Jupe': 'Jupes',
+    'Midi Skirts': 'Jupes',
+    'Mini Skirts': 'Jupes',
+    'Skirts and shorts': 'Jupes Et Shorts',
+    'Jupes et Shorts': 'Jupes Et Shorts',
+    'Jupes Et Robes': 'Robes Et Jupes',
+    'TOP': 'Tops',
+    'Top': 'Tops',
+    'Long Sleeved Top': 'Tops',
+    'Short Sleeved Top': 'Tops',
+    'Sleeveless Top': 'Tops',
+    'Tops et T-Shirts': 'Tops',
+    'Tops & Chemises': 'Tops',
+    'Baskets Homme': 'Baskets',
+    'SNEAKERS SIMONE': 'Sneakers',
+    'DERBIES': 'Derbies',
+    'SANDALES PLATES': 'Sandales',
+    'Sandals': 'Sandales',
+    'Chausson Espadrille': 'Espadrilles',
+    'Bottes Et Bottines': 'Bottes',
+    'Bottes de randonnée': 'Bottes',
+    'Mules Et Sandales': 'Mules',
+    'Chaussures De Ville': 'Chaussures',
+    'Zapatilla': 'Chaussures',
+    'SHOES': 'Chaussures',
+    'Talons Moyens': 'Chaussures',
+    'TALONS HAUT': 'Chaussures',
+    'Bain': 'Maillots De Bain',
+    'Beachwear': 'Maillots De Bain',
+    'SWIMWEAR': 'Maillots De Bain',
+    'Bikini Bottoms': 'Maillots De Bain',
+    'Maillots de bain': 'Maillots De Bain',
+    'Maillots 1 Pièce': 'Maillots De Bain',
+    'Maillots 1 piÃ¨ce': 'Maillots De Bain',
+    'Maillots De Bain 1 Pièce': 'Maillots De Bain',
+    'Maillots De Bain Femme': 'Maillots De Bain',
+    'Hauts De Maillot': 'Maillots De Bain',
+    'Hauts De Maillots': 'Maillots De Bain',
+    'Maille': 'Maille Et Sweats',
+    'Mailles Et Sweats': 'Maille Et Sweats',
+    'Knitwear': 'Maille Et Sweats',
+    'LINGERIE': 'Lingerie',
+    'Bodies Et Lingerie': 'Lingerie',
+    'Soutiens-Gorge Ampliformes': 'Lingerie',
+    'Brassières': 'Lingerie',
+    'Briefs': 'Lingerie',
+    'Boxers': 'Lingerie',
+    'Caleçons': 'Lingerie',
+    'Strings': 'Lingerie',
+    'Tangas': 'Lingerie',
+    'Hauts De Lingerie': 'Lingerie',
+    'Bodies & Pyjamas': 'Pyjamas',
+    'Body Et Combinaisons': 'Combinaisons',
+    'Bodies Et Combinaisons': 'Combinaisons',
+    'Sacs & Accessoires': 'Sacs',
+    'Sacs Et Accessoires': 'Sacs',
+    'Sacs Et Maroquinerie': 'Sacs',
+    'Sacs Et Pochettes': 'Sacs',
+    'Sacs Pepa': 'Sacs',
+    'Sac hobo Femme': 'Sacs',
+    'Handbags': 'Sacs',
+    'Tote Bags': 'Sacs',
+    'tote': 'Sacs',
+    'Sac à Dos': 'Sacs',
+    'Shoulder bags': 'Sacs À Bandoulière',
+    'Sacs Bandoulière': 'Sacs À Bandoulière',
+    'Sacs Et Bandoulières': 'Sacs À Bandoulière',
+    'Sac à Bandoulière': 'Sacs À Bandoulière',
+    'Sacs A Main': 'Sacs À Main',
+    'Pochettes Et Trousses': 'Pochettes',
+    'Pochettes Et Sachets Ramasse-Crottes': 'Pochettes',
+    'Housses Et Trousses': 'Trousses',
+    'MAROQUINERIE': 'Maroquinerie',
+    'Chaussettes Et Collants': 'Chaussettes',
+    'Bottoms': 'Bas',
+    'Bas lingerie': 'Bas',
+    'Culottes': 'Bas',
+    'Culottes Et Bas': 'Bas',
+    'Belts': 'Ceintures',
+    'Accessoires Et Chaussures': 'Accessoires',
+    'ACCESSORIES MEN': 'Accessoires',
+    'WOMEN ACCESSORIES': 'Accessoires',
+    'Boîtes À Bijoux': 'Accessoires',
+    'Casques': 'Accessoires',
+    'Masques': 'Accessoires',
+    'Shorts & Bermuda Shorts': 'Shorts',
+    'Bermudas': 'Shorts',
+    'Bootcut Jeans': 'Jeans',
+    'Jeans & Pantalons': 'Jeans',
+    'Jeans Et Pantalons': 'Jeans',
+    'Blazers': 'Vestes',
+    'Vestes & Manteaux, Homme': 'Vestes Et Manteaux',
+    'Manteaux Et Vestes': 'Vestes Et Manteaux',
+    'Manteaux/Veste - Bébé - Mixte': 'Vestes Et Manteaux',
+    'GILET': 'Gilets',
+    'LUMINAIRE': 'Luminaires',
+    'Néon LED à forme': 'Luminaires',
+    'Lampes À Poser': 'Luminaires',
+    'Lunettes De Vue': 'Lunettes',
+    'Bébé Garçon': 'Bébé',
+    'Nouveau Né': 'Bébé',
+    'Enfant Fille': 'Enfant',
+    'Fille': 'Enfant',
+    'Enfant Garçon': 'Enfant',
+}
+
+AUTRES = {
+    '#N/A', 'A definir', 'A définir', 'ACC LLG', 'AQUAHERO',
+    'CIVIL', 'Element', 'JAC', 'PAP', 'Prix', 'Silhouette',
+    'Mini', 'Nouveautés salon', 'OVERSHIRT', 'Col Rond',
+    'Removable straps',
+    'Bonpoint', 'Chanel', 'Gucci', 'Hermès', 'Prada', 'Vans',
+    'Birkenstock', 'Golden Goose', 'Hugo Boss', 'Hartford',
+    'Jimmy Choo', 'Reiko', 'Sessùn', 'Tartine & Chocolat',
+    'Band Of Outsiders', 'Anaki', 'IKKS', 'PS by PAUL SMITH',
+    'Petit Bateau', 'Air Jordan',
+    'Men, KNITWEAR, LMTS0194', 'Women, DRESSES, 7028I77-2135',
+    'Women, KNITWEAR, WA296C12519A', 'Women, TOP, 030-2WBET',
+    'Women, TOP, T0001FQ23', 'RTW CLOTHING', 'KEYRING & CHARM',
+    'SURFWEAR GIRLS', 'SURFWEAR MEN',
+    'Peinture Par Numéros', 'Affiches', 'Coffrets',
+    'Complément Alimentaire Peau', 'Vitamines et compléments alimentaires',
+    'Soin | Visage', 'Teint', 'Beauté Des Mains & Pieds',
+    'Faux Ongles', 'Protections Solaires', 'Hygiène', 'Produits Corps',
+    'Poubelle tri sélectif', "Plantes D'Intérieur", 'Jardin',
+    'Art De La Table', 'Assiettes', 'Coupelles', 'Couverts',
+    'Plats', 'Vases', 'Tables', 'Chaises', 'Assises', 'Poufs',
+    'Petit Mobilier', 'SIEGE SUR MESURE',
+    'Paniers', 'Cables', 'Isothermes', 'Bavoirs', 'Boutchou',
+}
+
+
+_TARGETS: set[str] = set(NORMALIZE_MAP.values())
+
+def normalize_product_type(name: str) -> str:
+    if name in NORMALIZE_MAP:
+        return NORMALIZE_MAP[name]
+    if name in AUTRES or name not in _TARGETS:
+        return "Autres"
+    return name
+
+
+def migrate_types(db_path: str | None = None) -> None:
+    import os
+    from db import DB_PATH, get_connection, close as db_close
+    path = db_path or DB_PATH
+    conn = duckdb.connect(path)
+    all_types = conn.execute(
+        "SELECT DISTINCT product_type FROM products WHERE product_type IS NOT NULL AND product_type != ''"
+    ).fetchall()
+    changed = 0
+    for (t,) in all_types:
+        normalized = normalize_product_type(t)
+        if normalized != t:
+            conn.execute(
+                "UPDATE products SET product_type = ? WHERE product_type = ?",
+                [normalized, t],
+            )
+            changed += 1
+    conn.commit()
+    print(f"✅ Migration terminée : {changed} types normalisés sur {len(all_types)} distincts")
+    counts = conn.execute(
+        "SELECT product_type, COUNT(*) FROM products GROUP BY product_type ORDER BY COUNT(*) DESC"
+    ).fetchall()
+    print(f"📊 Types après normalisation : {len(counts)} distincts")
+    conn.close()
+
+
+if __name__ == "__main__":
+    migrate_types()

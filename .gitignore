@@ -5,3 +5,4 @@ conversations/
 .venv/
 aidd_docs/
 AGENTS.md
+__pycache__/
