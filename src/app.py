@@ -6,7 +6,7 @@ sys.path.insert(0, str(Path(__file__).parent))
 import streamlit as st
 import pandas as pd
 
-from db import get_connection
+from db import get_connection, close as db_close
 
 st.set_page_config(page_title="Volteyr — Catalogue Produits", layout="wide")
 
@@ -111,7 +111,7 @@ def dashboard_page():
         use_container_width=True, hide_index=True,
     )
 
-    conn.close()
+    db_close()
 
 
 def filtering_page():
@@ -236,7 +236,7 @@ def filtering_page():
     else:
         st.sidebar.warning("Aucun produit sélectionné")
 
-    conn.close()
+    db_close()
 
 
 st.sidebar.title("Volteyr")
