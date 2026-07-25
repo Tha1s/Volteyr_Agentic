@@ -234,10 +234,10 @@ NORMALIZE_MAP = {
     'Ensembles Pour Bébés Et Tout-Petits': 'Bébé',
     'Chaussures - Chaussures': 'Chaussures',
     # V3 — doublons
-    'Robes & Jupes': 'Robes Et Jupes',
+
     'Sacs À Main': 'Sacs',
     'Portefeuilles': 'Petite Maroquinerie',
-    'Pantalons & Shorts': 'Pantalons',
+
     'Pantalons Et Jupes': 'Pantalons',
     'Pantalons Et Joggings': 'Pantalons',
     'Pantalons Et Combinaisons': 'Pantalons',
@@ -247,6 +247,71 @@ NORMALIZE_MAP = {
     'Lingerie Bas': 'Lingerie',
     'Peignoirs': 'Lingerie',
     'Peinture Par Numéros': 'Autres',
+    # V4 — fusion agressive 61 → 14 catégories
+    # T-Shirts unification → Hauts
+    'T-shirts': 'T-Shirts',
+    'T-shirts & Polos': 'T-Shirts',
+    'T-Shirts': 'Hauts',
+    # Hauts/Tops/Shirts
+    'Hauts': 'Hauts',
+    'Chemises Et Tops': 'Hauts',
+    'Chemises': 'Hauts',
+    'Blouses': 'Hauts',
+    'Tops': 'Hauts',
+    # Pulls & Maille
+    'Maille Et Sweats': 'Pulls & Maille',
+    'Sweats': 'Pulls & Maille',
+    'Cardigans': 'Pulls & Maille',
+    'Pulls Et Gilets': 'Pulls & Maille',
+    'Gilets': 'Pulls & Maille',
+    'Pulls': 'Pulls & Maille',
+    # Vestes & Manteaux
+    'Vestes Et Manteaux': 'Vestes & Manteaux',
+    'Manteaux': 'Vestes & Manteaux',
+    'Vestes': 'Vestes & Manteaux',
+    # Robes & Jupes
+    'Robes Et Combinaisons': 'Robes & Jupes',
+    'Robes Et Jupes': 'Robes & Jupes',
+    'Combinaisons': 'Robes & Jupes',
+    'Jupes Et Shorts': 'Robes & Jupes',
+    'Jupes': 'Robes & Jupes',
+    'Robes': 'Robes & Jupes',
+    # Chaussures
+    'Baskets': 'Chaussures',
+    'Sneakers': 'Chaussures',
+    'Sandales': 'Chaussures',
+    'Bottes': 'Chaussures',
+    'Bottines': 'Chaussures',
+    'Mules': 'Chaussures',
+    'Chaussures Et Accessoires': 'Chaussures',
+    # Pantalons & Shorts
+    'Jeans': 'Pantalons & Shorts',
+    'Shorts': 'Pantalons & Shorts',
+    'Joggings': 'Pantalons & Shorts',
+    'Bas': 'Pantalons & Shorts',
+    'Pantalons Et Shorts': 'Pantalons & Shorts',
+    'Pantalons': 'Pantalons & Shorts',
+    'Chaussettes': 'Pantalons & Shorts',
+    # Sacs & Maroquinerie
+    'Sacs À Bandoulière': 'Sacs & Maroquinerie',
+    'Maroquinerie': 'Sacs & Maroquinerie',
+    'Petite Maroquinerie': 'Sacs & Maroquinerie',
+    'Pochettes': 'Sacs & Maroquinerie',
+    'Sacs': 'Sacs & Maroquinerie',
+    # Bijoux
+    'Bagues': 'Bijoux',
+    'Bracelets': 'Bijoux',
+    'Colliers': 'Bijoux',
+    "Boucles D'Oreilles": 'Bijoux',
+    # Accessoires
+    'Ceintures': 'Accessoires',
+    'Lunettes': 'Accessoires',
+    'Accessoires Iphones 12': 'Accessoires',
+    # Maillots
+    'Maillots': 'Maillots De Bain',
+    # Enfant/Bébé
+    'Bébé': 'Bébé & Enfant',
+    'Enfant': 'Bébé & Enfant',
 }
 
 AUTRES = {
@@ -280,6 +345,8 @@ AUTRES = {
     'COUSSIN ET PLAID', 'Plaids', 'Valises Long Séjour',
     'Maison', 'Prêt-À-Porter', 'Prêt-à-porter', 'Vêtements',
     'Costumes & Smokings',
+    # V4
+    'Luminaires', 'Zyne',
 }
 
 
