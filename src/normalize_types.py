@@ -1,6 +1,8 @@
 import duckdb
-import os
 import re
+import csv
+import os
+from db import DB_PATH
 
 NORMALIZE_MAP = {
     'Pantalon': 'Pantalons',
@@ -368,9 +370,6 @@ def normalize_product_type(name: str) -> str:
 
 
 def add_category_column(db_path: str | None = None) -> None:
-    import csv
-    import os
-    from db import DB_PATH
     path = db_path or DB_PATH
     conn = duckdb.connect(path)
 
