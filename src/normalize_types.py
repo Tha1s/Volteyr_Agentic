@@ -197,6 +197,46 @@ NORMALIZE_MAP = {
     'wallet': 'Portefeuilles',
     'Porte-Chéquiers': 'Petite Maroquinerie',
     'Porte-Passeports': 'Petite Maroquinerie',
+    # V3 — genres
+    'Femme': 'Autres',
+    'Ensembles': 'Autres',
+    # V3 — sous-types chaussures
+    'Mocassins': 'Chaussures',
+    'Espadrilles': 'Chaussures',
+    'Running': 'Chaussures',
+    'Boots': 'Chaussures',
+    'Derbies': 'Chaussures',
+    # V3 — singletons accessoires
+    'Chapeaux': 'Accessoires',
+    'Bonnets': 'Accessoires',
+    'Casquettes': 'Accessoires',
+    'Foulards': 'Accessoires',
+    'Écharpes': 'Accessoires',
+    'Mitaines': 'Accessoires',
+    'Cravates': 'Accessoires',
+    'Parapluies': 'Accessoires',
+    'Trousses': 'Accessoires',
+    'Hats': 'Accessoires',
+    # V3 — bijoux
+    'Broches': 'Bijoux',
+    'Pendentifs': 'Bijoux',
+    # V3 — vêtements divers
+    'Polos': 'T-Shirts',
+    'Kimonos': 'Vestes',
+    'Ponchos': 'Vestes',
+    'Tuniques': 'Chemises',
+    'Chaussons Bébés': 'Chaussures',
+    'Pulls & Cardigans': 'Pulls',
+    'Pulls & Sweats': 'Pulls',
+    'T-Shirts Et Tops': 'Tops',
+    'Culottes Menstruelles': 'Lingerie',
+    'Bloomer/Culotte': 'Bébé',
+    'Ensembles Pour Bébés Et Tout-Petits': 'Bébé',
+    'Chaussures - Chaussures': 'Chaussures',
+    # V3 — doublons
+    'Robes & Jupes': 'Robes Et Jupes',
+    'Sacs À Main': 'Sacs',
+    'Portefeuilles': 'Petite Maroquinerie',
     'Pantalons & Shorts': 'Pantalons',
     'Pantalons Et Jupes': 'Pantalons',
     'Pantalons Et Joggings': 'Pantalons',
@@ -232,7 +272,14 @@ AUTRES = {
     'Plats', 'Vases', 'Tables', 'Chaises', 'Assises', 'Poufs',
     'Petit Mobilier', 'SIEGE SUR MESURE',
     'Paniers', 'Cables', 'Isothermes', 'Bavoirs', 'Boutchou',
-    'CÉRÉMONIE', 'MEN', 'WOVEN', 'Homme', 'Bras', 'Corps',
+    'CÉRÉMONIE', 'MEN', 'WOVEN',     'Homme', 'Bras', 'Corps',
+    # V3 — non-mode
+    'Tapis', 'Décoration', 'Arts De La Table', 'Linge De Lit',
+    'Draps Plats', 'Parure De Couette', "Taies D'Oreiller",
+    'Linge De Bain', 'Serviettes', 'Linge De Maison',
+    'COUSSIN ET PLAID', 'Plaids', 'Valises Long Séjour',
+    'Maison', 'Prêt-À-Porter', 'Prêt-à-porter', 'Vêtements',
+    'Costumes & Smokings',
 }
 
 
