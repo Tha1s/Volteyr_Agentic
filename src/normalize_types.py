@@ -152,6 +152,7 @@ NORMALIZE_MAP = {
     'Vestes & Manteaux, Homme': 'Vestes Et Manteaux',
     'Manteaux Et Vestes': 'Vestes Et Manteaux',
     'Manteaux/Veste - Bébé - Mixte': 'Vestes Et Manteaux',
+    'Manteaux/Veste': 'Vestes & Manteaux',
     'GILET': 'Gilets',
     'LUMINAIRE': 'Luminaires',
     'Néon LED à forme': 'Luminaires',
@@ -253,7 +254,7 @@ NORMALIZE_MAP = {
     'T-shirts & Polos': 'T-Shirts',
     'T-Shirts': 'Hauts',
     # Hauts/Tops/Shirts
-    'Hauts': 'Hauts',
+
     'Chemises Et Tops': 'Hauts',
     'Chemises': 'Hauts',
     'Blouses': 'Hauts',
@@ -359,38 +360,51 @@ def normalize_product_type(name: str) -> str:
     cleaned = _CHILD_SUFFIX.sub('', name).strip()
     if cleaned != name:
         name = cleaned
-    if name in NORMALIZE_MAP:
-        return NORMALIZE_MAP[name]
+    while name in NORMALIZE_MAP:
+        name = NORMALIZE_MAP[name]
     if name in AUTRES:
         return "Autres"
     return name
 
 
-def migrate_types(db_path: str | None = None) -> None:
+def add_category_column(db_path: str | None = None) -> None:
+    import csv
     import os
-    from db import DB_PATH, get_connection, close as db_close
+    from db import DB_PATH
     path = db_path or DB_PATH
     conn = duckdb.connect(path)
-    all_types = conn.execute(
-        "SELECT DISTINCT product_type FROM products WHERE product_type IS NOT NULL"
-    ).fetchall()
+
+    CSV_PATH = os.path.join(os.path.dirname(os.path.dirname(__file__)), "data", "products.csv")
+
+    conn.execute("ALTER TABLE products ADD COLUMN IF NOT EXISTS category VARCHAR")
+
+    with open(CSV_PATH, "r", encoding="utf-8") as f:
+        reader = csv.DictReader(f)
+        updates = {}
+        for row in reader:
+            pid = int(row["product_id"].strip())
+            raw_type = row["product_type"].strip() if row["product_type"] else ""
+            updates[pid] = raw_type
+
     changed = 0
-    for (t,) in all_types:
-        normalized = normalize_product_type(t)
-        if normalized != t:
-            conn.execute(
-                "UPDATE products SET product_type = ? WHERE product_type = ?",
-                [normalized, t],
-            )
-            changed += 1
+    for pid, raw_type in updates.items():
+        category = normalize_product_type(raw_type)
+        conn.execute(
+            "UPDATE products SET product_type = ?, category = ? WHERE product_id = ?",
+            [raw_type, category, pid],
+        )
+        changed += 1
+
     conn.commit()
-    print(f"✅ Migration terminée : {changed} types normalisés sur {len(all_types)} distincts")
+    print(f"✅ Migration terminée : {changed} produits mis à jour (product_type restauré, category ajoutée)")
     counts = conn.execute(
-        "SELECT product_type, COUNT(*) FROM products GROUP BY product_type ORDER BY COUNT(*) DESC"
+        "SELECT category, COUNT(*) FROM products GROUP BY category ORDER BY COUNT(*) DESC"
     ).fetchall()
-    print(f"📊 Types après normalisation : {len(counts)} distincts")
+    print(f"📊 Catégories après migration : {len(counts)} distinctes")
+    for cat, cnt in counts:
+        print(f"   {cat}: {cnt}")
     conn.close()
 
 
 if __name__ == "__main__":
-    migrate_types()
+    add_category_column()

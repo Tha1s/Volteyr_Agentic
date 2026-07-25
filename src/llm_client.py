@@ -7,7 +7,8 @@ MODEL = "qwen2.5:1.5b"
 ENRICHMENT_PROMPT = """You are a product description writer for a luxury fashion e-commerce store.
 The products are sold in France and the descriptions must be in French.
 
-Product type: {product_type}
+Product category: {category}
+Specific type: {product_type}
 Brand: {vendor}
 Original description: {description}
 
@@ -45,11 +46,12 @@ def parse_enrichment(text):
     return sections if sections else None
 
 
-def enrich_product(description, product_type, vendor):
+def enrich_product(description, product_type, category, vendor):
     if not description:
         description = "(aucune description disponible)"
     prompt = ENRICHMENT_PROMPT.format(
         product_type=product_type or "Non spécifié",
+        category=category or "Non spécifié",
         vendor=vendor or "Non spécifié",
         description=description,
     )

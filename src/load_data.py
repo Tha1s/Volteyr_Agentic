@@ -15,9 +15,11 @@ def parse_and_load():
         reader = csv.DictReader(f)
         rows = []
         for row in reader:
+            raw_type = row["product_type"]
             rows.append((
                 int(row["product_id"]),
-                normalize_product_type(row["product_type"]),
+                raw_type,
+                normalize_product_type(raw_type),
                 row["product_tags"],
                 row["images_array"],
                 row["vendor"],
@@ -27,7 +29,7 @@ def parse_and_load():
             ))
 
     conn.executemany(
-        "INSERT INTO products VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
+        "INSERT INTO products VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
         rows,
     )
 

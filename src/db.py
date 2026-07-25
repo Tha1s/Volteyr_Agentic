@@ -17,6 +17,7 @@ def _init_schema(conn):
         CREATE TABLE IF NOT EXISTS products (
             product_id BIGINT PRIMARY KEY,
             product_type VARCHAR,
+            category VARCHAR,
             product_tags VARCHAR,
             images_array VARCHAR,
             vendor VARCHAR,

@@ -76,14 +76,14 @@ def dashboard_page():
     st.bar_chart(chart.set_index("Qualité"), height=300)
 
     types_df = conn.execute("""
-        SELECT product_type, COUNT(*) as nb
+        SELECT category, COUNT(*) as nb
         FROM products
-        WHERE product_type IS NOT NULL AND product_type != ''
-        GROUP BY product_type
+        WHERE category IS NOT NULL AND category != ''
+        GROUP BY category
         ORDER BY nb DESC LIMIT 15
     """).fetchdf()
-    st.subheader("Top 15 — Types de produits")
-    st.bar_chart(types_df.set_index("product_type"), height=300)
+    st.subheader("Top 15 — Catégories")
+    st.bar_chart(types_df.set_index("category"), height=300)
 
     vendors_df = conn.execute("""
         SELECT vendor, COUNT(*) as nb
@@ -96,7 +96,7 @@ def dashboard_page():
     st.bar_chart(vendors_df.set_index("vendor"), height=300)
 
     preview = conn.execute("""
-        SELECT product_id, product_type, vendor, description
+        SELECT product_id, product_type, category, vendor, description
         FROM products LIMIT 100
     """).fetchdf()
     preview["Qualité"] = preview["description"].apply(quality_label)
@@ -105,7 +105,8 @@ def dashboard_page():
     st.dataframe(
         preview.rename(columns={
             "product_id": "ID",
-            "product_type": "Type",
+            "product_type": "Type brut",
+            "category": "Catégorie",
             "vendor": "Marque",
             "description": "Description",
         }),
@@ -139,10 +140,10 @@ def filtering_page():
     all_types = [
         r[0]
         for r in conn.execute(
-            f"SELECT DISTINCT p.product_type FROM products p WHERE {' AND '.join(base_conditions)} AND p.product_type IS NOT NULL AND p.product_type != '' ORDER BY p.product_type"
+            f"SELECT DISTINCT p.category FROM products p WHERE {' AND '.join(base_conditions)} AND p.category IS NOT NULL AND p.category != '' ORDER BY p.category"
         ).fetchall()
     ]
-    t_filter = st.sidebar.multiselect("Type de produit", all_types, key="type_filter")
+    t_filter = st.sidebar.multiselect("Catégorie", all_types, key="type_filter")
 
     # Reset vendor selection when type filter changes
     prev_types = st.session_state.get("_prev_types", [])
@@ -155,7 +156,7 @@ def filtering_page():
     vendor_params = base_params.copy()
     if t_filter:
         ph = ", ".join(["?"] * len(t_filter))
-        vendor_conditions.append(f"p.product_type IN ({ph})")
+        vendor_conditions.append(f"p.category IN ({ph})")
         vendor_params.extend(t_filter)
 
     all_vendors = [
@@ -172,7 +173,7 @@ def filtering_page():
 
     if t_filter:
         ph = ", ".join(["?"] * len(t_filter))
-        conditions.append(f"p.product_type IN ({ph})")
+        conditions.append(f"p.category IN ({ph})")
         params.extend(t_filter)
 
     if v_filter:
@@ -182,7 +183,7 @@ def filtering_page():
 
     where = " AND ".join(conditions)
     df = conn.execute(
-        f"SELECT p.product_id, p.product_type, p.vendor, p.description FROM products p WHERE {where} ORDER BY p.product_id",
+        f"SELECT p.product_id, p.product_type, p.category, p.vendor, p.description FROM products p WHERE {where} ORDER BY p.product_id",
         params,
     ).fetchdf()
 
@@ -203,7 +204,7 @@ def filtering_page():
     current_ids = set(df["product_id"].tolist())
     st.session_state.sel_ids &= current_ids
 
-    display = df[["product_id", "product_type", "vendor", "description", "Qualité"]].copy()
+    display = df[["product_id", "product_type", "category", "vendor", "description", "Qualité"]].copy()
     display.insert(0, "Sél.", display["product_id"].isin(st.session_state.sel_ids))
 
     edited = st.data_editor(
@@ -211,12 +212,13 @@ def filtering_page():
         column_config={
             "Sél.": st.column_config.CheckboxColumn("Sél."),
             "product_id": st.column_config.NumberColumn("ID"),
-            "product_type": "Type",
+            "product_type": "Type brut",
+            "category": "Catégorie",
             "vendor": "Marque",
             "description": "Description",
             "Qualité": "Qualité",
         },
-        disabled=["product_id", "product_type", "vendor", "description", "Qualité"],
+        disabled=["product_id", "product_type", "category", "vendor", "description", "Qualité"],
         hide_index=True,
         use_container_width=True,
         key="editor",
@@ -234,7 +236,7 @@ def filtering_page():
             export = conn.execute(
                 f"""
                 SELECT
-                    p.product_id, p.product_type, p.vendor,
+                    p.product_id, p.product_type, p.category, p.vendor,
                     p.description AS original_description,
                     e.enriched_description, e.material,
                     e.care_instructions, e.style, e.seo_keywords
@@ -265,7 +267,7 @@ def enrichment_page():
     conn = get_connection()
 
     products_df = conn.execute(
-        "SELECT product_id, product_type, vendor, description FROM products ORDER BY product_id"
+        "SELECT product_id, product_type, category, vendor, description FROM products ORDER BY product_id"
     ).fetchdf()
 
     product_ids = products_df["product_id"].tolist()
@@ -275,7 +277,8 @@ def enrichment_page():
 
     col1, col2 = st.columns(2)
     with col1:
-        st.markdown("**Type:** " + str(product["product_type"] or ""))
+        st.markdown("**Type brut:** " + str(product["product_type"] or ""))
+        st.markdown("**Catégorie:** " + str(product["category"] or ""))
         st.markdown("**Marque:** " + str(product["vendor"] or ""))
         st.markdown("**Description originale:**")
         st.info(product["description"] or "(vide)")
@@ -283,7 +286,7 @@ def enrichment_page():
     if st.button("Enrichir un test", type="primary"):
         with st.spinner("Appel à Ollama..."):
             result = enrich_product(
-                product["description"], product["product_type"], product["vendor"]
+                product["description"], product["product_type"], product["category"], product["vendor"]
             )
 
         if result is None:
@@ -332,7 +335,7 @@ def enrichment_page():
 
                 for i, pid in enumerate(sorted(sel_ids)):
                     row = conn.execute(
-                        "SELECT product_type, vendor, description FROM products WHERE product_id = ?",
+                        "SELECT product_type, category, vendor, description FROM products WHERE product_id = ?",
                         [pid],
                     ).fetchone()
                     if row is None:
@@ -343,7 +346,7 @@ def enrichment_page():
                     progress_bar.progress((i + 1) / total, text=f"{i+1}/{total} — #{pid}")
                     status.write(f"Traitement #{pid}...")
 
-                    result = enrich_product(row[2], row[0], row[1])
+                    result = enrich_product(row[3], row[0], row[1], row[2])
                     if result is None:
                         failed += 1
                         failed_ids.append(pid)
