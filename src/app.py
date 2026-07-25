@@ -7,7 +7,7 @@ import streamlit as st
 import pandas as pd
 
 from db import get_connection, close as db_close
-from llm_client import enrich_product
+from llm_client import enrich_product, check_ollama, enrich_batch, MODEL
 
 st.set_page_config(page_title="Volteyr — Catalogue Produits", layout="wide")
 
@@ -264,51 +264,54 @@ def filtering_page():
         n_sel = len(sel_ids)
         if n_sel > 0:
             if st.sidebar.button(f"Enrichir la sélection ({n_sel})", use_container_width=True):
-                progress_bar = st.progress(0, text="Préparation...")
-                status = st.status("Enrichissement en cours...", expanded=True)
+                if not check_ollama():
+                    st.sidebar.error("Ollama n'est pas disponible. Vérifie que le service tourne.")
+                else:
+                    progress_bar = st.progress(0, text="Préparation...")
+                    status = st.status("Enrichissement en cours...", expanded=True)
 
-                enriched = 0
-                failed = 0
-                failed_ids = []
-                total = len(sel_ids)
+                    sel_ids_sorted = sorted(sel_ids)
+                    products_data = []
+                    for pid in sel_ids_sorted:
+                        row = conn.execute(
+                            "SELECT category, product_type, vendor, description, product_tags FROM products WHERE product_id = ?",
+                            [pid],
+                        ).fetchone()
+                        if row:
+                            products_data.append({
+                                "description": row[3] or "",
+                                "product_type": row[1] or "",
+                                "category": row[0] or "",
+                                "vendor": row[2] or "",
+                                "tags": row[4] or "",
+                            })
 
-                for i, pid in enumerate(sorted(sel_ids)):
-                    row = conn.execute(
-                        "SELECT category, product_type, vendor, description, product_tags FROM products WHERE product_id = ?",
-                        [pid],
-                    ).fetchone()
-                    if row is None:
-                        failed += 1
-                        failed_ids.append(pid)
-                        continue
+                    total = len(products_data)
+                    enriched = 0
+                    failed = 0
+                    failed_ids = []
 
-                    result = enrich_product(
-                        description=row[3] or "",
-                        product_type=row[1] or "",
-                        vendor=row[2] or "",
-                        category=row[0] or "",
-                        tags=row[4] or "",
-                    )
+                    for i, (result, pid) in enumerate(zip(enrich_batch(products_data), sel_ids_sorted)):
+                        if result["result"]:
+                            r = result["result"]
+                            conn.execute(
+                                """INSERT OR REPLACE INTO enrichissements
+                                (product_id, enriched_description, material, care_instructions, style, seo_keywords, created_at, model_used)
+                                VALUES (?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP, ?)""",
+                                [pid, r.get("enriched_description"), r.get("material"),
+                                 r.get("care_instructions"), r.get("style"),
+                                 r.get("seo_keywords"), MODEL],
+                            )
+                            enriched += 1
+                        else:
+                            failed += 1
+                            failed_ids.append(pid)
 
-                    if result:
-                        conn.execute(
-                            """INSERT OR REPLACE INTO enrichissements
-                            (product_id, enriched_description, material, care_instructions, style, seo_keywords, created_at, model_used)
-                            VALUES (?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP, ?)""",
-                            [pid, result.get("enriched_description"), result.get("material"),
-                             result.get("care_instructions"), result.get("style"),
-                             result.get("seo_keywords"), "qwen2.5:1.5b"],
-                        )
-                        enriched += 1
-                    else:
-                        failed += 1
-                        failed_ids.append(pid)
+                        progress_bar.progress((i + 1) / total, text=f"{i+1}/{total} — {enriched} OK, {failed} échecs")
 
-                    progress_bar.progress((i + 1) / total, text=f"{i+1}/{total} — {enriched} OK, {failed} échecs")
-
-                status.update(label=f"Terminé — {enriched} enrichis, {failed} échecs", state="complete" if failed == 0 else "error")
-                if failed_ids:
-                    st.sidebar.error(f"Échecs: {failed_ids}")
+                    status.update(label=f"Terminé — {enriched} enrichis, {failed} échecs", state="complete" if failed == 0 else "error")
+                    if failed_ids:
+                        st.sidebar.error(f"Échecs: {failed_ids}")
         else:
             st.sidebar.info("Sélectionnez des produits dans le tableau pour les enrichir")
     else:
