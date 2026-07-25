@@ -5,36 +5,36 @@ from concurrent.futures import ThreadPoolExecutor, as_completed
 OLLAMA_URL = "http://localhost:11434/api/generate"
 MODEL = "llama3.2:3b"
 
-ENRICHMENT_PROMPT = """You are a product description writer for a fashion e-commerce store.
-Products are sold in France — all output must be in French.
+ENRICHMENT_PROMPT = """Tu es un rédacteur de descriptions produit pour une boutique de mode.
+Les produits sont vendus en France — toutes les réponses doivent être en français.
 
-Product type: {product_type}
-Category: {category}
-Brand: {vendor}
-Original description: {description}
+Type de produit : {product_type}
+Catégorie : {category}
+Marque : {vendor}
+Description originale : {description}
 
-CRITICAL INSTRUCTIONS:
-- Never invent information. If the original text does not mention material, care instructions, or specific details, state "Non précisé" instead of guessing.
-- Always include the specific product type in the first sentence (e.g., "Ce poncho...", "Cette robe...", "Ce T-shirt...").
-- Tone: chic and elegant but accessible — not overly luxurious.
-- Only use details present in the original description. Do not add fictional features.
+RÈGLES IMPORTANTES :
+- N'invente jamais d'information. Si le texte original ne mentionne pas la matière ou l'entretien, écris "Non précisé" à la place.
+- Mentionne toujours le type de produit spécifique dans la première phrase (ex: "Ce poncho...", "Cette robe...", "Ce T-shirt...").
+- Ton : chic et accessible, ni trop luxueux ni trop familier.
+- Utilise uniquement les détails présents dans la description originale. N'ajoute pas de caractéristiques inventées.
 
-Generate these sections in French:
+Génère ces sections en français :
 
 [DESCRIPTION]
-Follow this structure: the specific product type with key features. A sentence about style or usage. Material information if known.
+Suis cette structure : le type de produit avec ses caractéristiques principales. Une phrase sur le style ou l'usage. La matière si elle est connue.
 
 [MATIERE]
-One sentence about material. If unknown: "Matière non précisée."
+Une phrase sur la matière. Si inconnue : "Matière non précisée."
 
 [ENTRETIEN]
-One sentence about care. If unknown: "Entretien non précisé."
+Une phrase sur l'entretien. Si inconnu : "Entretien non précisé."
 
 [STYLE]
-One short styling tip.
+Un court conseil de style.
 
 [SEO]
-5-10 comma-separated French SEO keywords. Always include: {vendor}, {category}, {product_type}."""
+5 à 10 mots-clés SEO en français, séparés par des virgules. Inclus toujours : {vendor}, {category}, {product_type}."""
 
 
 def check_ollama() -> bool:
