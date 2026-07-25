@@ -34,7 +34,7 @@ One sentence about care. If unknown: "Entretien non précisé."
 One short styling tip.
 
 [SEO]
-5-10 comma-separated French SEO keywords. Always include: {brand}, {category}, {product_type}."""
+5-10 comma-separated French SEO keywords. Always include: {vendor}, {category}, {product_type}."""
 
 
 def parse_enrichment(text):
