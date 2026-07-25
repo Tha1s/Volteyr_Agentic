@@ -1,5 +1,6 @@
 import duckdb
 import os
+import re
 
 NORMALIZE_MAP = {
     'Pantalon': 'Pantalons',
@@ -161,6 +162,51 @@ NORMALIZE_MAP = {
     'Enfant Fille': 'Enfant',
     'Fille': 'Enfant',
     'Enfant Garçon': 'Enfant',
+    'ACCESSOIRES': 'Accessoires',
+    'CHEMISE': 'Chemises',
+    'TSHIRTS & TOPS': 'Tops',
+    'T-Shirts & Tops': 'Tops',
+    'JUMPER': 'Pulls',
+    'DENIM': 'Jeans',
+    'Joggers': 'Joggings',
+    'Maillot': 'Maillots',
+    'Doudounes': 'Vestes',
+    'Parkas': 'Vestes',
+    'Softshells': 'Vestes',
+    'Escarpins': 'Chaussures',
+    'Ballerines': 'Chaussures',
+    'Pumps': 'Chaussures',
+    'Sabots': 'Chaussures',
+    'Tongs': 'Chaussures',
+    'Slides': 'Chaussures',
+    'Bateaux': 'Chaussures',
+    'Pulls & Gilets': 'Pulls',
+    'Pulls Et Sweats': 'Pulls',
+    'Leggings': 'Bas',
+    'Cyclistes': 'Bas',
+    'Manchette': 'Bracelets',
+    'Fonds De Robes': 'Robes',
+    'Robe mi-longue': 'Robes',
+    'Jupe mi-longue': 'Jupes',
+    'Teddies': 'Pulls',
+    'Combinaisons & Robes': 'Combinaisons',
+    'Nightwear': 'Pyjamas',
+    'Nuit': 'Pyjamas',
+    'Bras': 'Bijoux',
+    'Anses': 'Sacs',
+    'wallet': 'Portefeuilles',
+    'Porte-Chéquiers': 'Petite Maroquinerie',
+    'Porte-Passeports': 'Petite Maroquinerie',
+    'Pantalons & Shorts': 'Pantalons',
+    'Pantalons Et Jupes': 'Pantalons',
+    'Pantalons Et Joggings': 'Pantalons',
+    'Pantalons Et Combinaisons': 'Pantalons',
+    'Pantalons Et Jeans': 'Pantalons',
+    'Pantalons & Leggings': 'Pantalons',
+    'Sets De Valises': 'Valises Long Séjour',
+    'Lingerie Bas': 'Lingerie',
+    'Peignoirs': 'Lingerie',
+    'Peinture Par Numéros': 'Autres',
 }
 
 AUTRES = {
@@ -186,15 +232,20 @@ AUTRES = {
     'Plats', 'Vases', 'Tables', 'Chaises', 'Assises', 'Poufs',
     'Petit Mobilier', 'SIEGE SUR MESURE',
     'Paniers', 'Cables', 'Isothermes', 'Bavoirs', 'Boutchou',
+    'CÉRÉMONIE', 'MEN', 'WOVEN', 'Homme', 'Bras', 'Corps',
 }
 
 
-_TARGETS: set[str] = set(NORMALIZE_MAP.values())
+_CHILD_SUFFIX = re.compile(r'\s*-\s*(?:Bébé|Enfant|Fille|Garçon|Mixte|Homme|Femme).*$', re.IGNORECASE)
+
 
 def normalize_product_type(name: str) -> str:
+    cleaned = _CHILD_SUFFIX.sub('', name).strip()
+    if cleaned != name:
+        name = cleaned
     if name in NORMALIZE_MAP:
         return NORMALIZE_MAP[name]
-    if name in AUTRES or name not in _TARGETS:
+    if name in AUTRES:
         return "Autres"
     return name
 
