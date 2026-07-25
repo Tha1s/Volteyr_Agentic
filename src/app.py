@@ -37,6 +37,85 @@ def truncate_desc(desc, max_len=80):
     return s
 
 
+def dashboard_page():
+    st.header("Tableau de bord")
+    conn = get_connection()
+
+    total = conn.execute("SELECT COUNT(*) FROM products").fetchone()[0]
+    empty = conn.execute(
+        "SELECT COUNT(*) FROM products WHERE description IS NULL OR description = ''"
+    ).fetchone()[0]
+    short = conn.execute(
+        "SELECT COUNT(*) FROM products WHERE LENGTH(description) < 50 AND description IS NOT NULL AND description != ''"
+    ).fetchone()[0]
+    avg = conn.execute(
+        "SELECT AVG(LENGTH(description)) FROM products WHERE description IS NOT NULL AND description != ''"
+    ).fetchone()[0] or 0
+
+    cols = st.columns(4)
+    cols[0].metric("Total produits", total)
+    cols[1].metric("Descriptions vides", empty)
+    cols[2].metric("Descriptions < 50c", short)
+    cols[3].metric("Longueur moyenne", f"{avg:.0f} caractères")
+
+    med = conn.execute(
+        "SELECT COUNT(*) FROM products WHERE LENGTH(description) >= 50 AND LENGTH(description) < 200 AND description IS NOT NULL AND description != ''"
+    ).fetchone()[0]
+    long_ = conn.execute(
+        "SELECT COUNT(*) FROM products WHERE LENGTH(description) >= 200 AND LENGTH(description) < 500 AND description IS NOT NULL AND description != ''"
+    ).fetchone()[0]
+    xlong = conn.execute(
+        "SELECT COUNT(*) FROM products WHERE LENGTH(description) >= 500 AND description IS NOT NULL AND description != ''"
+    ).fetchone()[0]
+
+    chart = pd.DataFrame({
+        "Qualité": ["Vide", "<50c", "50-200c", "200-500c", ">500c"],
+        "Nombre": [empty, short, med, long_, xlong],
+    })
+    st.subheader("Qualité des descriptions")
+    st.bar_chart(chart.set_index("Qualité"), height=300)
+
+    types_df = conn.execute("""
+        SELECT category, COUNT(*) as nb
+        FROM products
+        WHERE category IS NOT NULL AND category != ''
+        GROUP BY category
+        ORDER BY nb DESC LIMIT 15
+    """).fetchdf()
+    st.subheader("Top 15 — Catégories")
+    st.bar_chart(types_df.set_index("category"), height=300)
+
+    vendors_df = conn.execute("""
+        SELECT vendor, COUNT(*) as nb
+        FROM products
+        WHERE vendor IS NOT NULL AND vendor != ''
+        GROUP BY vendor
+        ORDER BY nb DESC LIMIT 15
+    """).fetchdf()
+    st.subheader("Top 15 — Marques")
+    st.bar_chart(vendors_df.set_index("vendor"), height=300)
+
+    preview = conn.execute("""
+        SELECT product_id, product_type, category, vendor, description
+        FROM products LIMIT 100
+    """).fetchdf()
+    preview["Qualité"] = preview["description"].apply(quality_label)
+    preview["description"] = preview["description"].apply(truncate_desc)
+    st.subheader("Aperçu du catalogue")
+    st.dataframe(
+        preview.rename(columns={
+            "product_id": "ID",
+            "product_type": "Type brut",
+            "category": "Catégorie",
+            "vendor": "Marque",
+            "description": "Description",
+        }),
+        use_container_width=True, hide_index=True,
+    )
+
+    db_close()
+
+
 def enrichment_page():
     st.title("Enrichissement IA")
     conn = get_connection()
@@ -285,7 +364,9 @@ def enrichment_page():
 
 
 st.sidebar.title("Volteyr")
-page = st.sidebar.selectbox("Navigation", ["Enrichissement"], key="nav")
+page = st.sidebar.selectbox("Navigation", ["Tableau de bord", "Enrichissement"], key="nav")
 
-if page == "Enrichissement":
+if page == "Tableau de bord":
+    dashboard_page()
+else:
     enrichment_page()
