@@ -240,6 +240,8 @@ _CHILD_SUFFIX = re.compile(r'\s*-\s*(?:Bébé|Enfant|Fille|Garçon|Mixte|Homme|F
 
 
 def normalize_product_type(name: str) -> str:
+    if not name or not name.strip():
+        return "Autres"
     cleaned = _CHILD_SUFFIX.sub('', name).strip()
     if cleaned != name:
         name = cleaned
@@ -256,7 +258,7 @@ def migrate_types(db_path: str | None = None) -> None:
     path = db_path or DB_PATH
     conn = duckdb.connect(path)
     all_types = conn.execute(
-        "SELECT DISTINCT product_type FROM products WHERE product_type IS NOT NULL AND product_type != ''"
+        "SELECT DISTINCT product_type FROM products WHERE product_type IS NOT NULL"
     ).fetchall()
     changed = 0
     for (t,) in all_types:
