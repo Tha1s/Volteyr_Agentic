@@ -1,5 +1,6 @@
 import functools
 import re
+import unicodedata
 from pathlib import Path
 
 CONFIG_PATH = Path(__file__).resolve().parent.parent.parent / "config" / "categories.yaml"
@@ -79,8 +80,14 @@ _CAT_KEYWORDS = {
 }
 
 
-def _simple_match(product_type: str) -> str:
-    t = product_type.lower()
+def _strip_accents(s: str) -> str:
+    return unicodedata.normalize("NFKD", s).encode("ASCII", "ignore").decode("ASCII")
+
+
+def _simple_match(product_type: str | None) -> str:
+    if not product_type or not product_type.strip():
+        return "Autres"
+    t = _strip_accents(product_type.lower())
     for category, keywords in _CAT_KEYWORDS.items():
         if any(w in t for w in keywords):
             return category

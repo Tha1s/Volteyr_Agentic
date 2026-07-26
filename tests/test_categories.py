@@ -67,3 +67,23 @@ def test_auto_fill():
             assert mapping["MarqueInconnue"] == "Autres"
     finally:
         tmp_path.unlink(missing_ok=True)
+
+
+class TestSimpleMatchEdgeCases:
+    def test_empty_string(self):
+        assert _simple_match("") == "Autres"
+
+    def test_none(self):
+        assert _simple_match(None) == "Autres"
+
+    def test_accented_bebe(self):
+        assert _simple_match("Bébé") == "Bébé & Enfant"
+
+    def test_mixed_case_pantalon(self):
+        assert _simple_match("PANTALON") == "Pantalons"
+
+    def test_partial_match_pantalon_en_lin(self):
+        assert _simple_match("Pantalon en lin") == "Pantalons"
+
+    def test_ambiguous_sac_a_main(self):
+        assert _simple_match("Sac à main") == "Sacs & Maroquinerie"
