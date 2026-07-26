@@ -19,6 +19,21 @@ class ProductRepository:
             [threshold],
         ).fetchone()[0]
 
+    def count_medium(self) -> int:
+        return self.conn.execute(
+            "SELECT COUNT(*) FROM products WHERE LENGTH(description) >= 50 AND LENGTH(description) < 200"
+        ).fetchone()[0]
+
+    def count_long(self) -> int:
+        return self.conn.execute(
+            "SELECT COUNT(*) FROM products WHERE LENGTH(description) >= 200 AND LENGTH(description) < 500"
+        ).fetchone()[0]
+
+    def count_very_long(self) -> int:
+        return self.conn.execute(
+            "SELECT COUNT(*) FROM products WHERE LENGTH(description) >= 500"
+        ).fetchone()[0]
+
     def count_by_category(self) -> list[tuple[str, int]]:
         return self.conn.execute(
             "SELECT category, COUNT(*) AS cnt FROM products GROUP BY category ORDER BY cnt DESC"
@@ -41,6 +56,15 @@ class ProductRepository:
         if result.empty:
             return None
         return result.to_dict("records")[0]
+
+    def find_by_ids(self, ids: list[int]) -> list[dict]:
+        if not ids:
+            return []
+        placeholders = ",".join("?" * len(ids))
+        return self.conn.execute(
+            f"SELECT * FROM products WHERE product_id IN ({placeholders}) ORDER BY product_id",
+            ids,
+        ).fetchdf().to_dict("records")
 
     def find_filtered(
         self,
