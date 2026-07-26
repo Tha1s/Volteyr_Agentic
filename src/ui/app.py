@@ -50,6 +50,7 @@ with st.sidebar.expander("📂 Charger un CSV", expanded=st.session_state.get("d
                     row["description"],
                 ))
             conn = get_connection()
+            conn.execute("DELETE FROM enrichissements")
             conn.execute("DELETE FROM products")
             conn.executemany(
                 """INSERT INTO products (product_id, product_type, category, product_tags, images_array, vendor, inventory_quantity, gross_amount_exc_tax_product, description)

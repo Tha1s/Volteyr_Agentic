@@ -12,6 +12,7 @@ from src.config.categories import normalize_product_type, load_category_map
 def parse_and_load(csv_path: str = "data/products.csv"):
     conn = get_connection()
     init_schema()
+    conn.execute("DELETE FROM enrichissements")
     conn.execute("DELETE FROM products")
 
     mapping = load_category_map()
