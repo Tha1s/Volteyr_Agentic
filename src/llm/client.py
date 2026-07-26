@@ -1,3 +1,4 @@
+import json
 import time
 
 import requests
@@ -28,9 +29,13 @@ def generate(
             resp.raise_for_status()
             data = resp.json()
             return data.get("response")
-        except Exception:
+        except requests.RequestException as e:
+            print(f"LLM request failed (attempt {attempt+1}): {e}")
             if attempt == 0:
                 time.sleep(1)
+        except json.JSONDecodeError as e:
+            print(f"LLM response not valid JSON: {e}")
+            return None
     return None
 
 
@@ -38,5 +43,5 @@ def check_ollama() -> bool:
     try:
         resp = requests.get("http://localhost:11434/api/tags", timeout=10)
         return resp.status_code == 200
-    except Exception:
+    except requests.RequestException:
         return False
