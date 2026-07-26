@@ -7,7 +7,10 @@ _connection = None
 def get_connection():
     global _connection
     if _connection is None:
-        _connection = duckdb.connect("data/volteyr.db")
+        try:
+            _connection = duckdb.connect("data/volteyr.db")
+        except Exception as e:
+            raise RuntimeError(f"Failed to connect to DuckDB: {e}") from e
     return _connection
 
 
