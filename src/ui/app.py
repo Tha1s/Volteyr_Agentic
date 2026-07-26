@@ -49,30 +49,35 @@ with st.sidebar.expander("📂 Charger un CSV", expanded=st.session_state.get("d
     if st.session_state.get("data_loaded", 0) > 0:
         st.success(f"✅ {st.session_state.data_loaded} produits chargés")
 
-page = st.sidebar.radio(
-    "Navigation",
-    ["📊 Tableau de bord", "✨ Enrichissement", "📥 Export"],
-    key="nav",
-)
-
-if page == "📊 Tableau de bord":
-    show_dashboard()
-
-elif page == "✨ Enrichissement":
-    st.title("Enrichissement IA")
-    filters = show_filters()
-    repo = ProductRepository()
-    products = repo.find_filtered(
-        quality=filters.get("quality"),
-        categories=filters.get("categories"),
-        vendors=filters.get("vendors"),
+if st.session_state.get("enriching", False):
+    st.sidebar.warning("⚠️ Enrichissement en cours...")
+    from src.ui.components.batch_enrich import show_batch_enrich
+    show_batch_enrich(set())
+else:
+    page = st.sidebar.radio(
+        "Navigation",
+        ["📊 Tableau de bord", "✨ Enrichissement", "📥 Export"],
+        key="nav",
     )
-    if products:
-        df = pd.DataFrame(products)
-        selected = show_product_table(df)
-        show_batch_enrich(selected)
-    else:
-        st.info("Aucun produit trouvé avec ces filtres")
 
-elif page == "📥 Export":
-    show_export_page()
+    if page == "📊 Tableau de bord":
+        show_dashboard()
+
+    elif page == "✨ Enrichissement":
+        st.title("Enrichissement IA")
+        filters = show_filters()
+        repo = ProductRepository()
+        products = repo.find_filtered(
+            quality=filters.get("quality"),
+            categories=filters.get("categories"),
+            vendors=filters.get("vendors"),
+        )
+        if products:
+            df = pd.DataFrame(products)
+            selected = show_product_table(df)
+            show_batch_enrich(selected)
+        else:
+            st.info("Aucun produit trouvé avec ces filtres")
+
+    elif page == "📥 Export":
+        show_export_page()
