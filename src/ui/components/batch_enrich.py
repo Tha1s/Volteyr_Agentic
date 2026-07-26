@@ -44,6 +44,21 @@ def show_batch_enrich(selected_ids: set[int]) -> None:
 
     pipeline = EnrichmentPipeline()
 
+    if len(selected_ids) == 1:
+        progress_bar.progress(0, text="Enrichissement unitaire...")
+        product = pipeline.normalize.process(products_data)[0]
+        result = pipeline.run_single(product)
+        if result:
+            pipeline.persist.process([result])
+            st.session_state["_last_enrichment"] = result
+            status.update(label=f"Enrichi avec {result.model_used}", state="complete")
+            st.write(f"**Modèle utilisé:** {result.model_used}")
+            st.write(f"**Description:** {result.enriched_description[:200]}...")
+        else:
+            status.update(label="Échec de l'enrichissement", state="error")
+        progress_bar.progress(1.0, text="Terminé")
+        return
+
     progress_bar.progress(0, text="Normalisation...")
     norm_products = pipeline.normalize.process(products_data)
 

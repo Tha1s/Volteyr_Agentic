@@ -15,6 +15,9 @@ def show_dashboard():
     col4.metric("Descriptions < 200c", repo.count_short(200))
 
     total = repo.count_all()
+    if total == 0:
+        st.info("Aucun produit dans la base. Chargez un CSV pour commencer.")
+        return
     empty = repo.count_empty()
     short = repo.count_short(50)
     medium = repo.conn.execute(

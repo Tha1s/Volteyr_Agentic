@@ -1,3 +1,5 @@
+import csv
+import io
 import sys
 from pathlib import Path
 
@@ -13,6 +15,7 @@ from src.ui.components.export import show_export_page
 from src.db.product_repository import ProductRepository
 from src.db.schema import init_schema
 from src.db.connection import get_connection
+from src.config.categories import normalize_product_type, load_category_map
 
 st.set_page_config(page_title="Volteyr", layout="wide")
 
@@ -23,6 +26,42 @@ if "db_initialized" not in st.session_state:
 
 st.sidebar.title("Volteyr")
 st.sidebar.caption("Enrichissement catalogue")
+
+with st.sidebar.expander("📂 Charger un CSV", expanded=st.session_state.get("data_loaded", 0) == 0):
+    uploaded = st.file_uploader("Fichier CSV (format Shopify)", type=["csv"])
+    if uploaded:
+        st.caption(f"Fichier : {uploaded.name}")
+        if st.button("Charger les données", use_container_width=True):
+            mapping = load_category_map()
+            reader = csv.DictReader(io.StringIO(uploaded.getvalue().decode("utf-8")))
+            rows = []
+            for row in reader:
+                raw_type = row["product_type"]
+                category = normalize_product_type(raw_type, mapping)
+                rows.append((
+                    int(row["product_id"]),
+                    row["product_type"],
+                    category,
+                    row["product_tags"],
+                    row["images_array"],
+                    row["vendor"],
+                    int(row["inventory_quantity"]),
+                    float(row["gross_amount_exc_tax_product"]),
+                    row["description"],
+                ))
+            conn = get_connection()
+            conn.execute("DELETE FROM products")
+            conn.executemany(
+                """INSERT INTO products (product_id, product_type, category, product_tags, images_array, vendor, inventory_quantity, gross_amount_exc_tax_product, description)
+                   VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)""",
+                rows,
+            )
+            conn.commit()
+            st.session_state.data_loaded = len(rows)
+            st.rerun()
+
+    if st.session_state.get("data_loaded", 0) > 0:
+        st.success(f"✅ {st.session_state.data_loaded} produits chargés")
 
 page = st.sidebar.radio(
     "Navigation",
