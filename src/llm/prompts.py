@@ -20,11 +20,3 @@ Réponds UNIQUEMENT au format JSON avec ces champs:
   "seo_keywords": "..."
 }}"""
 
-CATEGORIZATION_SYSTEM = "Tu es un expert en catégorisation de produits de mode. Réponds uniquement en JSON."
-
-CATEGORIZATION_USER = """Assigne ce type de produit à une catégorie parmi la liste.
-Type produit: {product_type}
-Catégories disponibles: {categories}
-
-Réponds: {{"category": "nom_de_la_categorie"}}
-Si aucun ne correspond: {{"category": "Autres"}}"""
