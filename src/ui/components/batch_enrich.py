@@ -25,18 +25,18 @@ def show_batch_enrich(selected_ids: set[int]) -> None:
     status = st.status("Enrichissement...")
 
     repo = ProductRepository()
-    products_data = []
-    for pid in selected_ids:
-        product = repo.find_by_id(pid)
-        if product:
-            products_data.append({
-                "product_id": product["product_id"],
-                "product_type": product.get("product_type", ""),
-                "category": product.get("category", ""),
-                "vendor": product.get("vendor", ""),
-                "description": product.get("description", ""),
-                "product_tags": product.get("product_tags", ""),
-            })
+    products = repo.find_by_ids(list(selected_ids))
+    products_data = [
+        {
+            "product_id": p["product_id"],
+            "product_type": p.get("product_type", ""),
+            "category": p.get("category", ""),
+            "vendor": p.get("vendor", ""),
+            "description": p.get("description", ""),
+            "product_tags": p.get("product_tags", ""),
+        }
+        for p in products
+    ]
 
     if not products_data:
         status.update(label="Aucun produit trouvé", state="error")
@@ -59,37 +59,13 @@ def show_batch_enrich(selected_ids: set[int]) -> None:
         return
 
     progress_bar.progress(0, text="Enrichissement batch...")
-    total = len(products_data)
-    batch_size = 5
-    success_ids: list[int] = []
-    fail_ids: list[int] = []
 
-    for i in range(0, total, batch_size):
-        batch = products_data[i : i + batch_size]
-        batch_results = pipeline.generate.process(batch)
-        for product, result in zip(batch, batch_results):
-            if result is not None:
-                success_ids.append(product["product_id"])
-            else:
-                fail_ids.append(product["product_id"])
-        batch_success, batch_failures = pipeline.persist.process(batch_results)
-
-        progress = min(i + len(batch), total)
-        progress_bar.progress(progress / total, text=f"{progress}/{total}")
-        status.update(
-            label=f"Enrichissement... {len(success_ids)} OK, {len(fail_ids)} échecs",
-        )
+    success, failures = pipeline.run(products_data, batch_size=5)
 
     progress_bar.progress(1.0, text="Terminé")
     status.update(
-        label=f"Terminé: {len(success_ids)} OK, {len(fail_ids)} échecs",
-        state="complete" if not fail_ids else "error",
+        label=f"Terminé: {success} OK, {failures} échecs",
+        state="complete" if failures == 0 else "error",
     )
-
-    with status:
-        if success_ids:
-            st.write(f"✅ Réussis ({len(success_ids)}) : {sorted(success_ids)}")
-        if fail_ids:
-            st.write(f"❌ Échecs ({len(fail_ids)}) : {sorted(fail_ids)}")
 
     st.rerun()
