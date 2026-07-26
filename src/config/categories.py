@@ -62,32 +62,28 @@ def auto_fill_categories(product_types: set[str]) -> None:
     _save_category_map(existing)
 
 
+
+_CAT_KEYWORDS = {
+    "Pantalons": ("pantalon", "pants", "trouser", "jeans", "denim", "jogging", "legging", "short", "bermuda", "cycliste"),
+    "Hauts": ("t-shirt", "tshirt", "tee", "tees", "top", "haut", "chemise", "shirt", "blouse", "tunique", "polo", "body", "blazer", "kimono"),
+    "Vestes & Manteaux": ("veste", "manteau", "jacket", "coat", "doudoune", "parka", "gilet", "cardigan", "softshell", "blazer"),
+    "Pulls & Maille": ("pull", "sweat", "sweater", "jumper", "knit", "maille", "teddy", "hoodie"),
+    "Robes & Jupes": ("robe", "dress", "gown", "jupe", "skirt"),
+    "Chaussures": ("chaussure", "shoe", "basket", "sneaker", "derbie", "derby", "sandale", "sandal", "botte", "boot", "mule", "mocassin", "espadrille", "espadrilla", "tong", "slide", "ballerine", "escarpin", "pump", "sabot", "running", "chausson", "bateau", "talon"),
+    "Sacs & Maroquinerie": ("sac", "bag", "tote", "maroquinerie", "portefeuille", "pochette", "trousse", "wallet", "valise", "anse"),
+    "Bijoux": ("bijou", "bague", "bracelet", "collier", "boucle", "creole", "pendentif", "broche", "manchette", "bague"),
+    "Accessoires": ("ceinture", "belt", "chapeau", "bonnet", "casquette", "foulard", "echarpe", "lunette", "parapluie", "gant", "mitaine", "cravate", "epingle", "casque", "masque"),
+    "Lingerie": ("lingerie", "soutien", "brassiere", "culotte", "string", "tanga", "boxer", "calecon", "body", "peignoir", "pyjama", "nuit", "nightwear"),
+    "Maillots De Bain": ("maillot", "bain", "swim", "bikini", "beach"),
+    "Bébé & Enfant": ("bebe", "nouveau ne", "enfant", "fille", "garcon", "boutchou"),
+}
+
+
 def _simple_match(product_type: str) -> str:
     t = product_type.lower()
-    if any(w in t for w in ("pantalon", "pants", "trouser", "jeans", "denim", "jogging", "legging", "short", "bermuda", "cycliste")):
-        return "Pantalons"
-    if any(w in t for w in ("t-shirt", "tshirt", "tee", "tees", "top", "haut", "chemise", "shirt", "blouse", "tunique", "polo", "body", "blazer", "kimono")):
-        return "Hauts"
-    if any(w in t for w in ("veste", "manteau", "jacket", "coat", "doudoune", "parka", "gilet", "cardigan", "softshell", "blazer")):
-        return "Vestes & Manteaux"
-    if any(w in t for w in ("pull", "sweat", "sweater", "jumper", "knit", "maille", "teddy", "hoodie")):
-        return "Pulls & Maille"
-    if any(w in t for w in ("robe", "dress", "gown", "jupe", "skirt")):
-        return "Robes & Jupes"
-    if any(w in t for w in ("chaussure", "shoe", "basket", "sneaker", "derbie", "derby", "sandale", "sandal", "botte", "boot", "mule", "mocassin", "espadrille", "espadrilla", "tong", "slide", "ballerine", "escarpin", "pump", "sabot", "running", "chausson", "bateau", "talon")):
-        return "Chaussures"
-    if any(w in t for w in ("sac", "bag", "tote", "maroquinerie", "portefeuille", "pochette", "trousse", "wallet", "valise", "anse")):
-        return "Sacs & Maroquinerie"
-    if any(w in t for w in ("bijou", "bague", "bracelet", "collier", "boucle", "creole", "pendentif", "broche", "manchette", "bague")):
-        return "Bijoux"
-    if any(w in t for w in ("ceinture", "belt", "chapeau", "bonnet", "casquette", "foulard", "echarpe", "lunette", "parapluie", "gant", "mitaine", "cravate", "epingle", "casque", "masque", "foulard", "echarpe")):
-        return "Accessoires"
-    if any(w in t for w in ("lingerie", "soutien", "brassiere", "culotte", "string", "tanga", "boxer", "calecon", "body", "peignoir", "pyjama", "nuit", "nightwear")):
-        return "Lingerie"
-    if any(w in t for w in ("maillot", "bain", "swim", "bikini", "beach")):
-        return "Maillots De Bain"
-    if any(w in t for w in ("bebe", "nouveau ne", "enfant", "fille", "garcon", "boutchou")):
-        return "Bébé & Enfant"
+    for category, keywords in _CAT_KEYWORDS.items():
+        if any(w in t for w in keywords):
+            return category
     return "Autres"
 
 
