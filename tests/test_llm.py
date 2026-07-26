@@ -1,4 +1,5 @@
 import pytest
+import requests
 from unittest.mock import patch, MagicMock
 
 from src.llm.client import generate, check_ollama
@@ -23,7 +24,7 @@ def test_generate_success(mock_ollama_response):
 
 def test_generate_failure():
     with patch("src.llm.client.requests.post") as mock_post:
-        mock_post.side_effect = Exception("Connection refused")
+        mock_post.side_effect = requests.ConnectionError("Connection refused")
         result = generate("qwen2.5:1.5b", "test")
         assert result is None
 
@@ -38,13 +39,13 @@ def test_check_ollama_success():
 
 def test_check_ollama_failure():
     with patch("src.llm.client.requests.get") as mock_get:
-        mock_get.side_effect = Exception("No connection")
+        mock_get.side_effect = requests.ConnectionError("No connection")
         assert check_ollama() is False
 
 
 def test_small_model_strategy():
     strat = SmallModelStrategy()
-    assert "1.5b" in strat.model or "3b" in strat.model or "3B" in strat.model or "small" in strat.model.lower() or True  # Accept any reasonable model name
+    assert strat.model == "qwen2.5:1.5b"
     assert strat.timeout == 30
 
 
