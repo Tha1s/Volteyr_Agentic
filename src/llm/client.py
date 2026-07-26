@@ -7,6 +7,8 @@ OLLAMA_URL = "http://localhost:11434/api/generate"
 OLLAMA_TIMEOUT_LARGE = 120
 OLLAMA_TIMEOUT_SMALL = 30
 
+_session = requests.Session()
+
 
 def generate(
     model: str,
@@ -25,7 +27,7 @@ def generate(
     }
     for attempt in range(2):
         try:
-            resp = requests.post(OLLAMA_URL, json=payload, timeout=timeout)
+            resp = _session.post(OLLAMA_URL, json=payload, timeout=timeout)
             resp.raise_for_status()
             data = resp.json()
             return data.get("response")
@@ -41,7 +43,7 @@ def generate(
 
 def check_ollama() -> bool:
     try:
-        resp = requests.get("http://localhost:11434/api/tags", timeout=10)
+        resp = _session.get("http://localhost:11434/api/tags", timeout=10)
         return resp.status_code == 200
     except requests.RequestException:
         return False
