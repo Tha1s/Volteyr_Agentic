@@ -51,7 +51,6 @@ with st.sidebar.expander("📂 Charger un CSV", expanded=st.session_state.get("d
 
 if st.session_state.get("enriching", False):
     st.sidebar.warning("⚠️ Enrichissement en cours...")
-    from src.ui.components.batch_enrich import show_batch_enrich
     show_batch_enrich(set())
 else:
     page = st.sidebar.radio(

@@ -42,12 +42,27 @@ def _run_enrichment(ids: list[int], large_model: bool, shared: dict) -> None:
                 shared["failures"] = 1
                 shared["status"] = "Échec de l'enrichissement"
         else:
-            success, failures = pipeline.run(products_data, batch_size=5)
+            total = len(products_data)
+            success = 0
+            failures = 0
+            batch_size = 5
+            for i in range(0, total, batch_size):
+                batch = products_data[i : i + batch_size]
+                results = pipeline.generate.process(batch)
+                for result in results:
+                    if result is not None:
+                        success += 1
+                    else:
+                        failures += 1
+                pipeline.persist.process([r for r in results if r is not None])
+                shared["progress"] = min(i + batch_size, total) / total
+                shared["success"] = success
+                shared["failures"] = failures
+                shared["status"] = f"{success} OK, {failures} échecs"
+            shared["progress"] = 1.0
             shared["success"] = success
             shared["failures"] = failures
             shared["status"] = f"Terminé: {success} OK, {failures} échecs"
-
-        shared["progress"] = 1.0
     except Exception as e:
         shared["status"] = f"Erreur: {e}"
         shared["progress"] = 1.0
