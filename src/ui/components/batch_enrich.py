@@ -46,8 +46,7 @@ def show_batch_enrich(selected_ids: set[int]) -> None:
 
     if len(selected_ids) == 1:
         progress_bar.progress(0, text="Enrichissement unitaire...")
-        product = pipeline.normalize.process(products_data)[0]
-        result = pipeline.run_single(product)
+        result = pipeline.run_single(products_data[0])
         if result:
             pipeline.persist.process([result])
             st.session_state["_last_enrichment"] = result
@@ -59,16 +58,14 @@ def show_batch_enrich(selected_ids: set[int]) -> None:
         progress_bar.progress(1.0, text="Terminé")
         return
 
-    progress_bar.progress(0, text="Normalisation...")
-    norm_products = pipeline.normalize.process(products_data)
-
-    total = len(norm_products)
+    progress_bar.progress(0, text="Enrichissement batch...")
+    total = len(products_data)
     batch_size = 5
     success_ids: list[int] = []
     fail_ids: list[int] = []
 
     for i in range(0, total, batch_size):
-        batch = norm_products[i : i + batch_size]
+        batch = products_data[i : i + batch_size]
         batch_results = pipeline.generate.process(batch)
         for product, result in zip(batch, batch_results):
             if result is not None:
