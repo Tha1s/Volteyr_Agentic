@@ -27,7 +27,13 @@ def parse_and_load(csv_path: str = "data/products.csv"):
     for row in raw_rows:
         raw_type = row["product_type"]
         category = normalize_product_type(raw_type, mapping)
-        product_id = int(row["product_id"])
+        try:
+            product_id = int(row["product_id"])
+            inventory = int(row["inventory_quantity"])
+            price = float(row["gross_amount_exc_tax_product"])
+        except (ValueError, KeyError) as e:
+            print(f"Skipping row with invalid data: {e}")
+            continue
         rows.append((
             product_id,
             row["product_type"],
@@ -35,8 +41,8 @@ def parse_and_load(csv_path: str = "data/products.csv"):
             row["product_tags"],
             row["images_array"],
             row["vendor"],
-            int(row["inventory_quantity"]),
-            float(row["gross_amount_exc_tax_product"]),
+            inventory,
+            price,
             row["description"],
         ))
 
