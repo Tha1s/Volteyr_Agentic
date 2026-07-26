@@ -1,26 +1,7 @@
 import streamlit as st
 import pandas as pd
 
-
-def quality_label(desc: str | None) -> str:
-    if not desc:
-        return "Vide"
-    length = len(desc)
-    if length < 50:
-        return "<50c"
-    if length < 200:
-        return "50-200c"
-    if length < 500:
-        return "200-500c"
-    return ">500c"
-
-
-def truncate_desc(desc: str | None, max_len: int = 80) -> str:
-    if not desc:
-        return ""
-    if len(desc) > max_len:
-        return desc[:max_len] + "..."
-    return desc
+from src.ui.utils import quality_label, truncate_desc
 
 
 def show_product_table(products_df: pd.DataFrame) -> set[int]:
