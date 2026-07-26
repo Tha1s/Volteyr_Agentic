@@ -81,8 +81,6 @@ def show_batch_enrich(selected_ids: set[int]) -> None:
 
     st.session_state.enriching = True
     st.session_state.enrich_shared = shared
-    st.session_state.enrich_ids = ids
-    st.session_state.enrich_large = len(ids) == 1
 
     t = threading.Thread(
         target=_run_enrichment,
