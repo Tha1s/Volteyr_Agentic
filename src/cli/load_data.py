@@ -1,8 +1,9 @@
-import csv
-import sys
-from pathlib import Path
+if __name__ == "__main__":
+    from pathlib import Path
+    import sys
+    sys.path.insert(0, str(Path(__file__).resolve().parent.parent.parent))
 
-sys.path.insert(0, str(Path(__file__).resolve().parent.parent.parent))
+import csv
 
 from src.db.loader import load_csv_from_dictreader
 from src.db.schema import init_schema

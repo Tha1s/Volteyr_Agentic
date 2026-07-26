@@ -1,12 +1,13 @@
+if __name__ == "__main__":
+    from pathlib import Path
+    import sys
+    sys.path.insert(0, str(Path(__file__).resolve().parent.parent.parent))
+
 import csv
 import io
-import sys
-from pathlib import Path
 
 import pandas as pd
 import streamlit as st
-
-sys.path.insert(0, str(Path(__file__).resolve().parent.parent.parent))
 
 from src.ui.components.dashboard import show_dashboard
 from src.ui.components.filters import show_filters
