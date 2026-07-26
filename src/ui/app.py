@@ -3,6 +3,7 @@ import io
 import sys
 from pathlib import Path
 
+import pandas as pd
 import streamlit as st
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent.parent))
@@ -32,40 +33,51 @@ with st.sidebar.expander("📂 Charger un CSV", expanded=st.session_state.get("d
     if uploaded:
         st.caption(f"Fichier : {uploaded.name}")
         if st.button("Charger les données", use_container_width=True):
-            content = uploaded.getvalue().decode("utf-8")
-            reader = csv.DictReader(io.StringIO(content))
-            raw_rows = list(reader)
+            try:
+                content = uploaded.getvalue().decode("utf-8")
+                reader = csv.DictReader(io.StringIO(content))
+                raw_rows = list(reader)
 
-            types = {r["product_type"].strip() for r in raw_rows if r.get("product_type", "").strip()}
-            auto_fill_categories(types)
+                required_cols = {"product_id", "product_type", "product_tags", "images_array", "vendor", "inventory_quantity", "gross_amount_exc_tax_product", "description"}
+                if not required_cols.issubset(reader.fieldnames or []):
+                    missing = required_cols - set(reader.fieldnames or [])
+                    st.error(f"Colonnes manquantes: {missing}")
+                    st.stop()
 
-            mapping = load_category_map()
-            rows = []
-            for row in raw_rows:
-                raw_type = row["product_type"]
-                category = normalize_product_type(raw_type, mapping)
-                rows.append((
-                    int(row["product_id"]),
-                    row["product_type"],
-                    category,
-                    row["product_tags"],
-                    row["images_array"],
-                    row["vendor"],
-                    int(row["inventory_quantity"]),
-                    float(row["gross_amount_exc_tax_product"]),
-                    row["description"],
-                ))
-            conn = get_connection()
-            conn.execute("DELETE FROM enrichissements")
-            conn.execute("DELETE FROM products")
-            conn.executemany(
-                """INSERT INTO products (product_id, product_type, category, product_tags, images_array, vendor, inventory_quantity, gross_amount_exc_tax_product, description)
-                   VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)""",
-                rows,
-            )
-            conn.commit()
-            st.session_state.data_loaded = len(rows)
-            st.rerun()
+                types = {r["product_type"].strip() for r in raw_rows if r.get("product_type", "").strip()}
+                auto_fill_categories(types)
+
+                mapping = load_category_map()
+                rows = []
+                for row in raw_rows:
+                    raw_type = row["product_type"]
+                    category = normalize_product_type(raw_type, mapping)
+                    rows.append((
+                        int(row["product_id"]),
+                        row["product_type"],
+                        category,
+                        row["product_tags"],
+                        row["images_array"],
+                        row["vendor"],
+                        int(row["inventory_quantity"]),
+                        float(row["gross_amount_exc_tax_product"]),
+                        row["description"],
+                    ))
+                conn = get_connection()
+                conn.execute("DELETE FROM enrichissements")
+                conn.execute("DELETE FROM products")
+                conn.executemany(
+                    """INSERT INTO products (product_id, product_type, category, product_tags, images_array, vendor, inventory_quantity, gross_amount_exc_tax_product, description)
+                       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)""",
+                    rows,
+                )
+                conn.commit()
+                st.session_state.data_loaded = len(rows)
+                st.rerun()
+            except (ValueError, KeyError) as e:
+                st.error(f"Erreur lors du chargement du CSV: {e}")
+            except Exception as e:
+                st.error(f"Erreur inattendue: {e}")
 
     if st.session_state.get("data_loaded", 0) > 0:
         st.success(f"✅ {st.session_state.data_loaded} produits chargés")
@@ -89,8 +101,6 @@ elif page == "✨ Enrichissement":
         vendors=filters.get("vendors"),
     )
     if products:
-        import pandas as pd
-
         df = pd.DataFrame(products)
         selected = show_product_table(df)
         show_batch_enrich(selected)
