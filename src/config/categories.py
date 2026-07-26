@@ -1,3 +1,4 @@
+import functools
 import re
 from pathlib import Path
 
@@ -11,6 +12,7 @@ DEFAULT_CATEGORIES = [
 ]
 
 
+@functools.lru_cache(maxsize=1)
 def load_category_map() -> dict[str, str]:
     path = CONFIG_PATH
     if not path.exists():
