@@ -162,10 +162,16 @@ def test_from_db_row_valid():
     assert e.model_used == "qwen2.5:1.5b"
 
 
-def test_from_db_row_missing_keys():
+def test_from_db_row_missing_product_id():
     row: dict = {}
+    with pytest.raises(KeyError):
+        EnrichmentFactory.from_db_row(row)
+
+
+def test_from_db_row_missing_optional_keys():
+    row = {"product_id": 99}
     e = EnrichmentFactory.from_db_row(row)
-    assert e.product_id is None
+    assert e.product_id == 99
     assert e.enriched_description == ""
     assert e.material == ""
     assert e.care_instructions == ""
