@@ -34,7 +34,7 @@ def test_enrichment_from_llm_short_description():
 
 def test_enrichment_to_dict(sample_llm_response):
     e = EnrichmentFactory.from_llm_response(1, sample_llm_response)
-    d = e.to_dict()
+    d = e.to_dict
     assert d["product_id"] == 1
     assert d["seo_keywords"] == "robe, soie, soirée, élégance"
 
