@@ -9,7 +9,7 @@ from src.llm.prompts import ENRICHMENT_SYSTEM, ENRICHMENT_USER
 
 @pytest.fixture
 def mock_ollama_response():
-    with patch("src.llm.client.requests.post") as mock_post:
+    with patch("src.llm.client._session.post") as mock_post:
         mock_response = MagicMock()
         mock_response.raise_for_status.return_value = None
         mock_response.json.return_value = {"response": '{"enriched_description": "Test", "material": "Soie"}'}
@@ -23,14 +23,14 @@ def test_generate_success(mock_ollama_response):
 
 
 def test_generate_failure():
-    with patch("src.llm.client.requests.post") as mock_post:
+    with patch("src.llm.client._session.post") as mock_post:
         mock_post.side_effect = requests.ConnectionError("Connection refused")
         result = generate("qwen2.5:1.5b", "test")
         assert result is None
 
 
 def test_check_ollama_success():
-    with patch("src.llm.client.requests.get") as mock_get:
+    with patch("src.llm.client._session.get") as mock_get:
         mock_response = MagicMock()
         mock_response.status_code = 200
         mock_get.return_value = mock_response
@@ -38,7 +38,7 @@ def test_check_ollama_success():
 
 
 def test_check_ollama_failure():
-    with patch("src.llm.client.requests.get") as mock_get:
+    with patch("src.llm.client._session.get") as mock_get:
         mock_get.side_effect = requests.ConnectionError("No connection")
         assert check_ollama() is False
 
