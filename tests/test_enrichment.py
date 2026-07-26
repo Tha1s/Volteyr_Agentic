@@ -1,5 +1,4 @@
 import pytest
-import json
 from src.enrichment.models import Enrichment
 from src.enrichment.factory import EnrichmentFactory
 from src.enrichment.pipeline import EnrichmentPipeline
