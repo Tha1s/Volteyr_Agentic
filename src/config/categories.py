@@ -1,4 +1,3 @@
-import json
 import re
 from pathlib import Path
 
@@ -55,58 +54,8 @@ def auto_fill_categories(product_types: set[str]) -> None:
     if not unknown:
         return
 
-    # Step 1: keyword-based matching for obvious types
-    hard_to_match = set()
     for t in unknown:
-        cat = _simple_match(t)
-        if cat == "Autres":
-            hard_to_match.add(t)
-        else:
-            existing[t] = cat
-
-    if not hard_to_match:
-        _save_category_map(existing)
-        return
-
-    # Step 2: LLM batch for remaining ambiguous types
-    from src.llm.client import generate
-
-    BATCH = 40
-    types_list = sorted(hard_to_match)
-
-    for start in range(0, len(types_list), BATCH):
-        batch = types_list[start : start + BATCH]
-        prompt = (
-            "Assigne chaque type de produit à la catégorie la plus appropriée.\n\n"
-            f"Catégories disponibles: {', '.join(DEFAULT_CATEGORIES)}\n\n"
-            "Types de produits:\n" + "\n".join(f"- {t}" for t in batch) + "\n\n"
-            'Réponds UNIQUEMENT au format JSON: {"mappings": {"Type": "Catégorie", ...}}\n'
-            'Si un type ne correspond à aucune catégorie, utilise "Autres".'
-        )
-
-        response = generate(
-            model="qwen2.5:1.5b",
-            prompt=prompt,
-            system="Tu es un expert en catégorisation de produits de mode. Réponds uniquement en JSON.",
-            temperature=0.1,
-        )
-
-        if response is None:
-            for t in batch:
-                existing[t] = "Autres"
-            continue
-
-        try:
-            data = json.loads(response)
-            new_mappings = data.get("mappings", {})
-        except (json.JSONDecodeError, AttributeError):
-            new_mappings = {}
-
-        for t in batch:
-            cat = new_mappings.get(t, "Autres")
-            if cat not in DEFAULT_CATEGORIES:
-                cat = "Autres"
-            existing[t] = cat
+        existing[t] = _simple_match(t)
 
     _save_category_map(existing)
 
