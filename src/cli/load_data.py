@@ -1,8 +1,8 @@
 import csv
-import os
 import sys
+from pathlib import Path
 
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", ".."))
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent.parent))
 
 from src.db.connection import get_connection
 from src.db.schema import init_schema

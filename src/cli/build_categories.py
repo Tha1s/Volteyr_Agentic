@@ -1,9 +1,9 @@
 import csv
 import json
-import os
 import sys
+from pathlib import Path
 
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent.parent))
 
 from src.llm.client import generate
 from src.llm.prompts import CATEGORIZATION_SYSTEM
