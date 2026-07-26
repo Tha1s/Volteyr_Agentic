@@ -143,3 +143,158 @@ def test_search(sample_products):
     results, total = repo.search(q="inexistant")
     assert total == 0
     assert len(results) == 0
+
+
+# T05: find_enriched_with_products edge cases
+
+
+def test_find_enriched_with_products_no_filter(sample_products):
+    repo = EnrichmentRepository()
+    repo.save(Enrichment(product_id=1, enriched_description="Robe soie test", model_used="test"))
+    repo.save(Enrichment(product_id=2, enriched_description="Pantalon lin test", model_used="test"))
+    results = repo.find_enriched_with_products()
+    assert len(results) == 2
+    ids = {r["product_id"] for r in results}
+    assert ids == {1, 2}
+
+
+def test_find_enriched_with_products_category_filter(sample_products):
+    repo = EnrichmentRepository()
+    repo.save(Enrichment(product_id=1, enriched_description="Robe soie test", model_used="test"))
+    repo.save(Enrichment(product_id=2, enriched_description="Pantalon lin test", model_used="test"))
+    results = repo.find_enriched_with_products(category="Pantalons")
+    assert len(results) == 1
+    assert results[0]["product_id"] == 2
+
+
+def test_find_enriched_with_products_category_no_match(sample_products):
+    repo = EnrichmentRepository()
+    repo.save(Enrichment(product_id=1, enriched_description="Robe soie test", model_used="test"))
+    results = repo.find_enriched_with_products(category="Chaussures")
+    assert results == []
+
+
+def test_find_enriched_with_products_after_save(sample_products):
+    repo = EnrichmentRepository()
+    assert repo.find_enriched_with_products() == []
+    repo.save(Enrichment(product_id=1, enriched_description="Test", model_used="test"))
+    results = repo.find_enriched_with_products()
+    assert len(results) == 1
+    assert results[0]["product_id"] == 1
+
+
+# T06: find_by_ids edge cases
+
+
+def test_find_by_ids_empty_list(sample_products):
+    repo = ProductRepository()
+    results = repo.find_by_ids([])
+    assert results == []
+
+
+def test_find_by_ids_valid_ids(sample_products):
+    repo = ProductRepository()
+    results = repo.find_by_ids([3, 1])
+    assert len(results) == 2
+    assert results[0]["product_id"] == 1
+    assert results[1]["product_id"] == 3
+
+
+def test_find_by_ids_mixed_valid_invalid(sample_products):
+    repo = ProductRepository()
+    results = repo.find_by_ids([1, 999, 2, 777])
+    assert len(results) == 2
+    assert {r["product_id"] for r in results} == {1, 2}
+
+
+# T07: search edge cases
+
+
+def test_search_empty_q(sample_products):
+    repo = EnrichmentRepository()
+    repo.save(Enrichment(product_id=1, enriched_description="Test", model_used="test"))
+    results, total = repo.search(q="")
+    assert total == 1
+
+
+def test_search_category_filter(sample_products):
+    repo = EnrichmentRepository()
+    repo.save(Enrichment(product_id=1, enriched_description="Test 1", model_used="test"))
+    repo.save(Enrichment(product_id=2, enriched_description="Test 2", model_used="test"))
+    results, total = repo.search(category="Robes & Jupes")
+    assert total == 1
+    assert results[0]["product_id"] == 1
+
+
+def test_search_vendor_filter(sample_products):
+    repo = EnrichmentRepository()
+    repo.save(Enrichment(product_id=1, enriched_description="Test 1", model_used="test"))
+    repo.save(Enrichment(product_id=2, enriched_description="Test 2", model_used="test"))
+    results, total = repo.search(vendor="Sandro")
+    assert total == 1
+    assert results[0]["product_id"] == 1
+
+
+def test_search_all_filters_combined(sample_products):
+    repo = EnrichmentRepository()
+    repo.save(Enrichment(product_id=1, enriched_description="Soie naturelle", model_used="test"))
+    results, total = repo.search(q="soie", category="Robes & Jupes", vendor="Sandro")
+    assert total == 1
+
+
+def test_search_returns_tuple(sample_products):
+    repo = EnrichmentRepository()
+    repo.save(Enrichment(product_id=1, enriched_description="Test", model_used="test"))
+    results, total = repo.search(q="test")
+    assert isinstance(results, list)
+    assert isinstance(total, int)
+    assert total == 1
+
+
+def test_search_pagination(sample_products):
+    repo = EnrichmentRepository()
+    repo.save(Enrichment(product_id=1, enriched_description="Test 1", model_used="test"))
+    repo.save(Enrichment(product_id=2, enriched_description="Test 2", model_used="test"))
+    repo.save(Enrichment(product_id=3, enriched_description="Test 3", model_used="test"))
+    results, total = repo.search(limit=2, offset=0)
+    assert total == 3
+    assert len(results) == 2
+
+
+class TestInitSchemaIdempotency:
+
+    @pytest.fixture(autouse=True)
+    def setup(self, monkeypatch):
+        conn = duckdb.connect(":memory:")
+        monkeypatch.setattr(conn_mod, "_connection", conn)
+        from src.db.schema import init_schema
+        self.init_schema = init_schema
+        self.conn = conn
+        yield
+        conn.close()
+        close()
+
+    def test_init_schema_twice_no_error(self):
+        self.init_schema()
+        self.init_schema()
+
+    def test_init_schema_twice_no_duplicates(self):
+        self.init_schema()
+        count_before = self.conn.execute(
+            "SELECT COUNT(*) FROM information_schema.tables WHERE table_name = 'products'"
+        ).fetchone()[0]
+        self.init_schema()
+        count_after = self.conn.execute(
+            "SELECT COUNT(*) FROM information_schema.tables WHERE table_name = 'products'"
+        ).fetchone()[0]
+        assert count_before == 1
+        assert count_after == 1
+
+    def test_schema_creates_both_tables(self):
+        self.init_schema()
+        tables = self.conn.execute(
+            "SELECT table_name FROM information_schema.tables WHERE table_schema = 'main'"
+        ).fetchall()
+        table_names = {row[0] for row in tables}
+        assert "products" in table_names
+        assert "enrichissements" in table_names
