@@ -16,7 +16,6 @@ from src.ui.components.export import show_export_page
 from src.db.product_repository import ProductRepository
 from src.db.schema import init_schema
 from src.db.connection import get_connection
-from src.config.categories import normalize_product_type, load_category_map, auto_fill_categories
 
 st.set_page_config(page_title="Volteyr", layout="wide")
 
@@ -35,44 +34,11 @@ with st.sidebar.expander("📂 Charger un CSV", expanded=st.session_state.get("d
         if st.button("Charger les données", use_container_width=True):
             try:
                 content = uploaded.getvalue().decode("utf-8")
+                from src.db.loader import load_csv_from_dictreader
+
                 reader = csv.DictReader(io.StringIO(content))
-                raw_rows = list(reader)
-
-                required_cols = {"product_id", "product_type", "product_tags", "images_array", "vendor", "inventory_quantity", "gross_amount_exc_tax_product", "description"}
-                if not required_cols.issubset(reader.fieldnames or []):
-                    missing = required_cols - set(reader.fieldnames or [])
-                    st.error(f"Colonnes manquantes: {missing}")
-                    st.stop()
-
-                types = {r["product_type"].strip() for r in raw_rows if r.get("product_type", "").strip()}
-                auto_fill_categories(types)
-
-                mapping = load_category_map()
-                rows = []
-                for row in raw_rows:
-                    raw_type = row["product_type"]
-                    category = normalize_product_type(raw_type, mapping)
-                    rows.append((
-                        int(row["product_id"]),
-                        row["product_type"],
-                        category,
-                        row["product_tags"],
-                        row["images_array"],
-                        row["vendor"],
-                        int(row["inventory_quantity"]),
-                        float(row["gross_amount_exc_tax_product"]),
-                        row["description"],
-                    ))
-                conn = get_connection()
-                conn.execute("DELETE FROM enrichissements")
-                conn.execute("DELETE FROM products")
-                conn.executemany(
-                    """INSERT INTO products (product_id, product_type, category, product_tags, images_array, vendor, inventory_quantity, gross_amount_exc_tax_product, description)
-                       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)""",
-                    rows,
-                )
-                conn.commit()
-                st.session_state.data_loaded = len(rows)
+                count = load_csv_from_dictreader(reader)
+                st.session_state.data_loaded = count
                 st.rerun()
             except (ValueError, KeyError) as e:
                 st.error(f"Erreur lors du chargement du CSV: {e}")
