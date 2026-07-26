@@ -1,5 +1,11 @@
+from __future__ import annotations
+
+from typing import TYPE_CHECKING
+
 from src.db.connection import get_connection
-from src.enrichment.models import Enrichment
+
+if TYPE_CHECKING:
+    from src.enrichment.models import Enrichment
 
 
 class EnrichmentRepository:
@@ -7,6 +13,21 @@ class EnrichmentRepository:
         self._conn = get_connection()
 
     def save(self, enrichment: Enrichment) -> int:
+        from src.enrichment.factory import EnrichmentFactory
+
+        params = EnrichmentFactory.to_db_params(enrichment)
+        return self.save_from_dict(**params)
+
+    def save_from_dict(
+        self,
+        product_id: int,
+        enriched_description: str,
+        material: str = "",
+        care_instructions: str = "",
+        style: str = "",
+        seo_keywords: str = "",
+        model_used: str = "",
+    ) -> int:
         result = self._conn.execute(
             """
             INSERT INTO enrichissements
@@ -15,13 +36,13 @@ class EnrichmentRepository:
             RETURNING id
             """,
             (
-                enrichment.product_id,
-                enrichment.enriched_description,
-                enrichment.material,
-                enrichment.care_instructions,
-                enrichment.style,
-                enrichment.seo_keywords,
-                enrichment.model_used,
+                product_id,
+                enriched_description,
+                material,
+                care_instructions,
+                style,
+                seo_keywords,
+                model_used,
             ),
         )
         return result.fetchone()[0]
@@ -62,6 +83,37 @@ class EnrichmentRepository:
         self._conn.execute(
             "DELETE FROM enrichissements WHERE product_id = ?", (product_id,)
         )
+
+    def find_enriched_with_products(
+        self, category: str | None = None
+    ) -> list[dict]:
+        query = """
+            SELECT p.product_id, p.category, e.enriched_description, e.material,
+                   e.care_instructions, e.style, e.seo_keywords, e.model_used, e.created_at
+            FROM products p
+            INNER JOIN enrichissements e ON p.product_id = e.product_id
+        """
+        params: list = []
+        if category is not None:
+            query += " WHERE p.category = ?"
+            params.append(category)
+        query += " ORDER BY p.product_id"
+
+        rows = self._conn.execute(query, params).fetchall()
+        return [
+            {
+                "product_id": row[0],
+                "category": row[1],
+                "enriched_description": row[2],
+                "material": row[3],
+                "care_instructions": row[4],
+                "style": row[5],
+                "seo_keywords": row[6],
+                "model_used": row[7],
+                "created_at": row[8],
+            }
+            for row in rows
+        ]
 
     def search(
         self,
