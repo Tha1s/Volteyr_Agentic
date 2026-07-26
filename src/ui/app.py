@@ -15,7 +15,7 @@ from src.ui.components.export import show_export_page
 from src.db.product_repository import ProductRepository
 from src.db.schema import init_schema
 from src.db.connection import get_connection
-from src.config.categories import normalize_product_type, load_category_map
+from src.config.categories import normalize_product_type, load_category_map, auto_fill_categories
 
 st.set_page_config(page_title="Volteyr", layout="wide")
 
@@ -32,10 +32,16 @@ with st.sidebar.expander("📂 Charger un CSV", expanded=st.session_state.get("d
     if uploaded:
         st.caption(f"Fichier : {uploaded.name}")
         if st.button("Charger les données", use_container_width=True):
+            content = uploaded.getvalue().decode("utf-8")
+            reader = csv.DictReader(io.StringIO(content))
+            raw_rows = list(reader)
+
+            types = {r["product_type"].strip() for r in raw_rows if r.get("product_type", "").strip()}
+            auto_fill_categories(types)
+
             mapping = load_category_map()
-            reader = csv.DictReader(io.StringIO(uploaded.getvalue().decode("utf-8")))
             rows = []
-            for row in reader:
+            for row in raw_rows:
                 raw_type = row["product_type"]
                 category = normalize_product_type(raw_type, mapping)
                 rows.append((

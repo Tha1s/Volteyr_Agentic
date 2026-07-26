@@ -38,7 +38,7 @@ def generate_mapping(product_types: set[str]) -> dict:
         'Exemple: {"mappings": {"Pantalon": "Pantalons", "T-Shirt": "Hauts"}}\n'
         'Si un type ne correspond à aucune catégorie, utilise "Autres".'
     )
-    response = generate(model="llama3.2:3b", prompt=prompt, system=CATEGORIZATION_SYSTEM, temperature=0.3)
+    response = generate(model="qwen2.5:1.5b", prompt=prompt, system=CATEGORIZATION_SYSTEM, temperature=0.3)
     if response is None:
         print("Warning: LLM returned None, using fallback")
         return {}
