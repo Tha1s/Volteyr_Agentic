@@ -76,14 +76,16 @@ class ProductRepository:
         params = []
 
         if quality is not None:
-            if quality == "empty":
+            if quality == "Vide":
                 conditions.append("(description IS NULL OR description = '')")
-            elif quality == "short":
-                conditions.append("LENGTH(description) > 0 AND LENGTH(description) <= 50")
-            elif quality == "medium":
-                conditions.append("LENGTH(description) > 50 AND LENGTH(description) <= 200")
-            elif quality == "long":
-                conditions.append("LENGTH(description) > 200")
+            elif quality == "<50c":
+                conditions.append("(description IS NOT NULL AND description != '' AND LENGTH(description) < 50)")
+            elif quality == "50-200c":
+                conditions.append("(description IS NOT NULL AND description != '' AND LENGTH(description) >= 50 AND LENGTH(description) < 200)")
+            elif quality == "200-500c":
+                conditions.append("(description IS NOT NULL AND description != '' AND LENGTH(description) >= 200 AND LENGTH(description) < 500)")
+            elif quality == ">500c":
+                conditions.append("(description IS NOT NULL AND description != '' AND LENGTH(description) >= 500)")
 
         if categories:
             placeholders = ",".join("?" * len(categories))

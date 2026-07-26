@@ -1,5 +1,4 @@
 import json
-import time
 
 import requests
 
@@ -25,20 +24,17 @@ def generate(
         "options": {"temperature": temperature},
         "format": "json",
     }
-    for attempt in range(2):
-        try:
-            resp = _session.post(OLLAMA_URL, json=payload, timeout=timeout)
-            resp.raise_for_status()
-            data = resp.json()
-            return data.get("response")
-        except requests.RequestException as e:
-            print(f"LLM request failed (attempt {attempt+1}): {e}")
-            if attempt == 0:
-                time.sleep(1)
-        except json.JSONDecodeError as e:
-            print(f"LLM response not valid JSON: {e}")
-            return None
-    return None
+    try:
+        resp = _session.post(OLLAMA_URL, json=payload, timeout=timeout)
+        resp.raise_for_status()
+        data = resp.json()
+        return data.get("response")
+    except requests.RequestException as e:
+        print(f"LLM request failed: {e}")
+        return None
+    except json.JSONDecodeError as e:
+        print(f"LLM response not valid JSON: {e}")
+        return None
 
 
 def check_ollama() -> bool:

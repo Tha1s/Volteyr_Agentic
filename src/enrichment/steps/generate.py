@@ -9,7 +9,7 @@ from src.llm.strategies import get_strategy
 
 @dataclass
 class GenerateStep:
-    max_retries: int = 2
+    max_retries: int = 1
     use_large_model: bool = False
 
     def process(self, products: list[dict]) -> list[Enrichment | None]:
