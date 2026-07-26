@@ -36,8 +36,8 @@ class GenerateStep:
                                 product["product_id"], data, model_used
                             )
                             break
-                    except json.JSONDecodeError:
-                        pass
+                    except json.JSONDecodeError as e:
+                        print(f"JSON decode failed (attempt {attempt+1}): {e}")
             results.append(result)
             print(f"Generated {i+1}/{total}")
 
