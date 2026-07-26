@@ -40,9 +40,14 @@ def normalize_product_type(
     if mapping is None:
         mapping = load_category_map()
     default = mapping.get("default", "Autres")
-    if name in mapping:
-        return normalize_product_type(mapping[name], mapping)
-    for key, val in mapping.items():
-        if key.lower() == name.lower():
-            return normalize_product_type(val, mapping)
+    for _ in range(10):
+        if name in mapping:
+            name = mapping[name]
+        else:
+            for key, val in mapping.items():
+                if key.lower() == name.lower():
+                    name = val
+                    break
+            else:
+                return name
     return default
