@@ -20,7 +20,7 @@ class SmallModelStrategy:
     timeout: int = 30
 
     def generate(self, prompt: str, system: str = "") -> str | None:
-        return generate(self.model, prompt, system, self.temperature)
+        return generate(self.model, prompt, system, self.temperature, timeout=self.timeout)
 
 
 class LargeModelStrategy:
@@ -29,7 +29,7 @@ class LargeModelStrategy:
     timeout: int = 120
 
     def generate(self, prompt: str, system: str = "") -> str | None:
-        return generate(self.model, prompt, system, self.temperature)
+        return generate(self.model, prompt, system, self.temperature, timeout=self.timeout)
 
 
 def get_strategy(use_large: bool = False) -> LLMStrategy:

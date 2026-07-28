@@ -14,8 +14,10 @@ def generate(
     prompt: str,
     system: str = "",
     temperature: float = 0.7,
+    timeout: int | None = None,
 ) -> str | None:
-    timeout = OLLAMA_TIMEOUT_LARGE if "large" in model else OLLAMA_TIMEOUT_SMALL
+    if timeout is None:
+        timeout = OLLAMA_TIMEOUT_LARGE if "large" in model else OLLAMA_TIMEOUT_SMALL
     payload = {
         "model": model,
         "prompt": prompt,
