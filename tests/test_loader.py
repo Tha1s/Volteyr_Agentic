@@ -6,13 +6,14 @@ import pytest
 from unittest.mock import patch
 
 import src.db.connection as conn_mod
+from src.db.connection import close
 from src.db.loader import load_csv_from_dictreader
 
 
 @pytest.fixture
-def db_conn(monkeypatch):
+def db_conn():
     conn = duckdb.connect(":memory:")
-    monkeypatch.setattr(conn_mod, "_connection", conn)
+    conn_mod._local.connection = conn
     conn.execute("""
         CREATE TABLE products (
             product_id BIGINT PRIMARY KEY,
@@ -41,8 +42,7 @@ def db_conn(monkeypatch):
         )
     """)
     yield conn
-    conn.close()
-    conn_mod._connection = None
+    close()
 
 
 @pytest.fixture

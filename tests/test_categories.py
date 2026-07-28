@@ -10,7 +10,7 @@ from src.config.categories import (
 
 
 def test_simple_match_pantalon():
-    assert _simple_match("Pantalon") == "Pantalons"
+    assert _simple_match("Pantalon") == "Pantalons & Shorts"
 
 
 def test_simple_match_chaussures():
@@ -22,9 +22,9 @@ def test_simple_match_unknown():
 
 
 def test_normalize_with_mapping():
-    mapping = {"Pantalon": "Pantalons", "Pantalons": "Pantalons"}
+    mapping = {"Pantalon": "Pantalons & Shorts", "Pantalons & Shorts": "Pantalons & Shorts"}
     result = normalize_product_type("Pantalon", mapping)
-    assert result == "Pantalons"
+    assert result == "Pantalons & Shorts"
 
 
 def test_normalize_chain():
@@ -62,7 +62,7 @@ def test_auto_fill():
         with patch("src.config.categories.CONFIG_PATH", tmp_path):
             auto_fill_categories(types)
             mapping = load_category_map()
-            assert mapping["Pantalon"] == "Pantalons"
+            assert mapping["Pantalon"] == "Pantalons & Shorts"
             assert mapping["SHOES"] == "Chaussures"
             assert mapping["MarqueInconnue"] == "Autres"
     finally:
@@ -80,10 +80,10 @@ class TestSimpleMatchEdgeCases:
         assert _simple_match("Bébé") == "Bébé & Enfant"
 
     def test_mixed_case_pantalon(self):
-        assert _simple_match("PANTALON") == "Pantalons"
+        assert _simple_match("PANTALON") == "Pantalons & Shorts"
 
     def test_partial_match_pantalon_en_lin(self):
-        assert _simple_match("Pantalon en lin") == "Pantalons"
+        assert _simple_match("Pantalon en lin") == "Pantalons & Shorts"
 
     def test_ambiguous_sac_a_main(self):
         assert _simple_match("Sac à main") == "Sacs & Maroquinerie"

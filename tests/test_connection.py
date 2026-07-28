@@ -10,7 +10,7 @@ from src.db.connection import get_connection, close
 
 def _reset_connection():
     close()
-    conn_mod._connection = None
+    conn_mod._local.connection = None
 
 
 def test_singleton():
@@ -41,7 +41,7 @@ def test_temp_file_created_on_connect():
         db_path = Path(tmpdir) / "test.db"
         assert not db_path.exists()
         monkey_path = str(db_path)
-        with patch.object(conn_mod, "_connection", None):
+        with patch.object(conn_mod._local, "connection", None):
             try:
                 conn = duckdb.connect(monkey_path)
                 conn.execute("CREATE TABLE test (id INT)")
@@ -53,4 +53,18 @@ def test_temp_file_created_on_connect():
 
 
 def test_file_not_found_is_skipped():
-    pass
+    _reset_connection()
+    try:
+        with tempfile.TemporaryDirectory() as tmpdir:
+            test_path = str(Path(tmpdir) / "does_not_exist" / "volteyr.db")
+            Path(test_path).parent.mkdir(parents=True)
+            with patch.object(conn_mod, "DB_PATH", test_path):
+                conn = get_connection()
+                assert conn is not None
+                conn.execute("CREATE TABLE t (x INT)")
+                conn.execute("INSERT INTO t VALUES (42)")
+                row = conn.execute("SELECT x FROM t").fetchone()
+                assert row[0] == 42
+                assert Path(test_path).exists()
+    finally:
+        _reset_connection()

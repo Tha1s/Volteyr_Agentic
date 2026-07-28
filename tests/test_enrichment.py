@@ -3,11 +3,11 @@ import pytest
 from unittest.mock import MagicMock, patch
 
 import src.db.connection as conn_mod
+from src.db.connection import close
 from src.enrichment.models import Enrichment
 from src.enrichment.factory import EnrichmentFactory
 from src.enrichment.pipeline import EnrichmentPipeline
 from src.enrichment.steps.generate import GenerateStep
-from src.enrichment.steps.normalize import NormalizeStep
 from src.enrichment.steps.persist import PersistStep
 from src.db.enrichment_repository import EnrichmentRepository
 
@@ -24,9 +24,9 @@ def sample_llm_response():
 
 
 @pytest.fixture
-def db_conn(monkeypatch):
+def db_conn():
     conn = duckdb.connect(":memory:")
-    monkeypatch.setattr(conn_mod, "_connection", conn)
+    conn_mod._local.connection = conn
     conn.execute("""
         CREATE TABLE products (
             product_id BIGINT PRIMARY KEY,
@@ -55,8 +55,7 @@ def db_conn(monkeypatch):
         )
     """)
     yield conn
-    conn.close()
-    conn_mod._connection = None
+    close()
 
 def test_enrichment_from_llm_response(sample_llm_response):
     e = EnrichmentFactory.from_llm_response(42, sample_llm_response, "qwen2.5:7b")
@@ -79,24 +78,6 @@ def test_enrichment_to_dict(sample_llm_response):
     assert d["product_id"] == 1
     assert d["seo_keywords"] == "robe, soie, soirée, élégance"
 
-def test_normalize_step():
-    step = NormalizeStep()
-    products = [
-        {"product_id": 1, "product_type": "Robe", "category": ""},
-        {"product_id": 2, "product_type": "Pantalon", "category": ""},
-    ]
-    results = step.process(products)
-    for r in results:
-        assert r["category"] != ""
-
-def test_normalize_step_keeps_existing():
-    step = NormalizeStep()
-    products = [
-        {"product_id": 1, "product_type": "Robe", "category": "Robes & Jupes"},
-    ]
-    results = step.process(products)
-    assert results[0]["category"] == "Robes & Jupes"
-
 def test_pipeline_run_single():
     from unittest.mock import patch
     pipeline = EnrichmentPipeline()
@@ -107,10 +88,10 @@ def test_pipeline_run_single():
         assert result is None
 
 
-# ── T04: EnrichmentFactory.to_db_params / from_db_row ──────────────────────
+# ── T04: Enrichment.to_dict / from_db_row ──────────────────────
 
 
-def test_to_db_params_all_fields():
+def test_to_dict_all_fields():
     e = Enrichment(
         product_id=42,
         enriched_description="Une belle robe en soie",
@@ -120,7 +101,7 @@ def test_to_db_params_all_fields():
         seo_keywords="robe, soie",
         model_used="qwen2.5:7b",
     )
-    params = EnrichmentFactory.to_db_params(e)
+    params = e.to_dict
     assert params["product_id"] == 42
     assert params["enriched_description"] == "Une belle robe en soie"
     assert params["material"] == "Soie"
@@ -130,9 +111,9 @@ def test_to_db_params_all_fields():
     assert params["model_used"] == "qwen2.5:7b"
 
 
-def test_to_db_params_empty_fields():
+def test_to_dict_empty_fields():
     e = Enrichment(product_id=1, enriched_description="")
-    params = EnrichmentFactory.to_db_params(e)
+    params = e.to_dict
     assert params["product_id"] == 1
     assert params["enriched_description"] == ""
     assert params["material"] == ""

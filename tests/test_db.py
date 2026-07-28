@@ -9,9 +9,9 @@ import src.db.connection as conn_mod
 
 
 @pytest.fixture
-def db_conn(monkeypatch):
+def db_conn():
     conn = duckdb.connect(":memory:")
-    monkeypatch.setattr(conn_mod, "_connection", conn)
+    conn_mod._local.connection = conn
     conn.execute("""
         CREATE TABLE products (
             product_id BIGINT PRIMARY KEY,
@@ -40,7 +40,6 @@ def db_conn(monkeypatch):
         )
     """)
     yield conn
-    conn.close()
     close()
 
 
@@ -264,14 +263,13 @@ def test_search_pagination(sample_products):
 class TestInitSchemaIdempotency:
 
     @pytest.fixture(autouse=True)
-    def setup(self, monkeypatch):
+    def setup(self):
         conn = duckdb.connect(":memory:")
-        monkeypatch.setattr(conn_mod, "_connection", conn)
+        conn_mod._local.connection = conn
         from src.db.schema import init_schema
         self.init_schema = init_schema
         self.conn = conn
         yield
-        conn.close()
         close()
 
     def test_init_schema_twice_no_error(self):
