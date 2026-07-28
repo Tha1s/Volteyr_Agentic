@@ -6,3 +6,7 @@ conversations/
 aidd_docs/
 AGENTS.md
 __pycache__/
+.pytest_cache/
+.vscode/
+data/volteyr.db
+config/categories.yaml
