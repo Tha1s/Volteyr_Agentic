@@ -1,4 +1,4 @@
-.PHONY: all venv setup api streamlit dev test clean fclean
+.PHONY: all venv setup api streamlit dev db-init test clean fclean
 
 VENV := .venv
 
@@ -11,16 +11,19 @@ venv:
 setup: venv
 	$(VENV)/bin/pip install -r requirements.txt
 
-api:
+api: db-init
 	$(VENV)/bin/uvicorn src.api.main:app --reload --port 8000
 
-streamlit:
+streamlit: db-init
 	$(VENV)/bin/streamlit run src/ui/app.py --server.port 8501
 
-dev:
+dev: db-init
 	@$(VENV)/bin/uvicorn src.api.main:app --port 8000 & \
 	PID=$$!; trap 'kill $$PID 2>/dev/null' EXIT; \
 	$(VENV)/bin/streamlit run src/ui/app.py --server.port 8501
+
+db-init:
+	$(VENV)/bin/python -c "from src.db.schema import init_schema; init_schema()"
 
 test:
 	$(VENV)/bin/python -m pytest tests/ -v

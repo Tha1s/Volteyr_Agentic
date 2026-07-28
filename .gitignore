@@ -1,10 +1,4 @@
-context.md
-.opencode/
-opencode.jsonc
-conversations/
 .venv/
-aidd_docs/
-AGENTS.md
 __pycache__/
 .pytest_cache/
 .vscode/

@@ -1,6 +1,10 @@
 import csv
 import io
 import logging
+import sys
+from pathlib import Path
+
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent.parent))
 
 import pandas as pd
 import streamlit as st
@@ -25,7 +29,11 @@ def get_product_repo() -> ProductRepository:
 
 if "db_initialized" not in st.session_state:
     conn = get_connection()
-    init_schema()
+    try:
+        conn.execute("SELECT 1 FROM products LIMIT 0")
+    except Exception:
+        st.error("Base non initialisée. Lance `make db-init` depuis le terminal d'abord.")
+        st.stop()
     st.session_state.db_initialized = True
 
 st.sidebar.title("Volteyr")
