@@ -1,9 +1,6 @@
-if __name__ == "__main__":
-    from pathlib import Path
-    import sys
-    sys.path.insert(0, str(Path(__file__).resolve().parent.parent.parent))
-
 import csv
+import sys
+from pathlib import Path
 
 from src.db.loader import load_csv_from_dictreader
 from src.db.schema import init_schema
@@ -18,4 +15,5 @@ def parse_and_load(csv_path: str = "data/products.csv"):
 
 
 if __name__ == "__main__":
+    sys.path.insert(0, str(Path(__file__).resolve().parent.parent.parent))
     parse_and_load()

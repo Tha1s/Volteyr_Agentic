@@ -15,11 +15,7 @@ def show_filters() -> dict:
     selected_categories = st.sidebar.multiselect("Catégorie", options=categories)
 
     if selected_categories:
-        vendors = sorted({
-            r["vendor"]
-            for r in repo.find_filtered(categories=selected_categories)
-            if r["vendor"] is not None
-        })
+        vendors = repo.get_vendors_by_categories(selected_categories)
     else:
         vendors = repo.get_distinct_vendors()
 

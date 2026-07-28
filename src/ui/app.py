@@ -1,10 +1,6 @@
-if __name__ == "__main__":
-    from pathlib import Path
-    import sys
-    sys.path.insert(0, str(Path(__file__).resolve().parent.parent.parent))
-
 import csv
 import io
+import logging
 
 import pandas as pd
 import streamlit as st
@@ -18,7 +14,14 @@ from src.db.product_repository import ProductRepository
 from src.db.schema import init_schema
 from src.db.connection import get_connection
 
+logger = logging.getLogger(__name__)
+
 st.set_page_config(page_title="Volteyr", layout="wide")
+
+
+@st.cache_resource
+def get_product_repo() -> ProductRepository:
+    return ProductRepository()
 
 if "db_initialized" not in st.session_state:
     conn = get_connection()
@@ -43,8 +46,9 @@ with st.sidebar.expander("📂 Charger un CSV", expanded=st.session_state.get("d
                 st.rerun()
             except (ValueError, KeyError) as e:
                 st.error(f"Erreur lors du chargement du CSV: {e}")
-            except Exception as e:
-                st.error(f"Erreur inattendue: {e}")
+            except Exception:
+                logger.exception("Erreur inattendue lors du chargement du CSV")
+                st.error("Erreur inattendue lors du chargement du CSV")
 
     if st.session_state.get("data_loaded", 0) > 0:
         st.success(f"✅ {st.session_state.data_loaded} produits chargés")
@@ -65,7 +69,7 @@ else:
     elif page == "✨ Enrichissement":
         st.title("Enrichissement IA")
         filters = show_filters()
-        repo = ProductRepository()
+        repo = get_product_repo()
         products = repo.find_filtered(
             quality=filters.get("quality"),
             categories=filters.get("categories"),

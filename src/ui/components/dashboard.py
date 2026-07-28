@@ -4,7 +4,7 @@ import pandas as pd
 from src.db.product_repository import ProductRepository
 
 
-@st.cache_data(ttl=60)
+@st.cache_data
 def _get_dashboard_stats(data_loaded: int):
     repo = ProductRepository()
     total = repo.count_all()

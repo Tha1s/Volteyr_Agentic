@@ -3,35 +3,32 @@ import re
 import unicodedata
 from pathlib import Path
 
+import yaml
+
 CONFIG_PATH = Path(__file__).resolve().parent.parent.parent / "config" / "categories.yaml"
 
 DEFAULT_CATEGORIES = [
-    "Pantalons", "Hauts", "Vestes & Manteaux", "Pulls & Maille",
-    "Robes & Jupes", "Chemises", "Chaussures", "Sacs & Maroquinerie",
+    "Pantalons & Shorts", "Hauts", "Vestes & Manteaux", "Pulls & Maille",
+    "Robes & Jupes", "Chaussures", "Sacs & Maroquinerie",
     "Bijoux", "Accessoires", "Lingerie", "Maillots De Bain",
-    "Bébé & Enfant", "Autres",
+    "Bébé & Enfant", "Pyjamas", "Autres",
 ]
 
 
 @functools.lru_cache(maxsize=1)
 def load_category_map() -> dict[str, str]:
-    path = CONFIG_PATH
-    if not path.exists():
+    if not CONFIG_PATH.exists():
         return {"default": "Autres"}
-    text = path.read_text(encoding="utf-8")
-    mapping = {}
-    current_default = "Autres"
-    for line in text.splitlines():
-        line = line.strip()
-        if line.startswith("default:"):
-            current_default = line.split(":", 1)[1].strip().strip('"').strip("'")
-        elif ":" in line and not line.startswith("#"):
-            parts = line.split(":", 1)
-            key = parts[0].strip().strip('"')
-            val = parts[1].strip().strip('"')
-            if key and val and key not in ("mappings", "default"):
-                mapping[key] = val
-    mapping["default"] = current_default
+    with open(CONFIG_PATH, encoding="utf-8") as f:
+        data = yaml.safe_load(f)
+    if not isinstance(data, dict):
+        return {"default": "Autres"}
+    mappings = data.get("mappings", {})
+    if not isinstance(mappings, dict):
+        mappings = {}
+    default = data.get("default", "Autres")
+    mapping = {k: v for k, v in mappings.items() if k and v}
+    mapping["default"] = default
     for cat in DEFAULT_CATEGORIES:
         mapping.setdefault(cat, cat)
     return mapping
@@ -40,11 +37,9 @@ def load_category_map() -> dict[str, str]:
 def _save_category_map(mapping: dict[str, str]) -> None:
     CONFIG_PATH.parent.mkdir(parents=True, exist_ok=True)
     default = mapping.pop("default", "Autres")
-    lines = ["mappings:"]
-    for key in sorted(mapping):
-        lines.append(f'  "{key}": "{mapping[key]}"')
-    lines.append(f'default: "{default}"')
-    CONFIG_PATH.write_text("\n".join(lines) + "\n", encoding="utf-8")
+    data = {"mappings": dict(sorted(mapping.items())), "default": default}
+    with open(CONFIG_PATH, "w", encoding="utf-8") as f:
+        yaml.dump(data, f, allow_unicode=True, default_flow_style=False, sort_keys=False)
     mapping["default"] = default
     for cat in DEFAULT_CATEGORIES:
         mapping.setdefault(cat, cat)
@@ -65,18 +60,19 @@ def auto_fill_categories(product_types: set[str]) -> None:
 
 
 _CAT_KEYWORDS = {
-    "Pantalons": ("pantalon", "pants", "trouser", "jeans", "denim", "jogging", "legging", "short", "bermuda", "cycliste"),
-    "Hauts": ("t-shirt", "tshirt", "tee", "tees", "top", "haut", "chemise", "shirt", "blouse", "tunique", "polo", "body", "blazer", "kimono"),
+    "Pantalons & Shorts": ("pantalon", "pants", "trouser", "jeans", "denim", "jogging", "legging", "short", "bermuda", "cycliste"),
+    "Hauts": ("t-shirt", "tshirt", "tee", "tees", "top", "haut", "chemise", "shirt", "blouse", "tunique", "polo", "body", "bodie", "blazer", "kimono", "combinaison"),
     "Vestes & Manteaux": ("veste", "manteau", "jacket", "coat", "doudoune", "parka", "gilet", "cardigan", "softshell", "blazer"),
     "Pulls & Maille": ("pull", "sweat", "sweater", "jumper", "knit", "maille", "teddy", "hoodie"),
     "Robes & Jupes": ("robe", "dress", "gown", "jupe", "skirt"),
-    "Chaussures": ("chaussure", "shoe", "basket", "sneaker", "derbie", "derby", "sandale", "sandal", "botte", "boot", "mule", "mocassin", "espadrille", "espadrilla", "tong", "slide", "ballerine", "escarpin", "pump", "sabot", "running", "chausson", "bateau", "talon"),
+    "Chaussures": ("chaussure", "shoe", "basket", "sneaker", "derbie", "derby", "sandale", "sandal", "botte", "bottine", "boot", "mule", "mocassin", "espadrille", "espadrilla", "tong", "slide", "ballerine", "escarpin", "pump", "sabot", "running", "chausson", "bateau", "talon"),
+    "Bijoux": ("bijou", "bague", "bracelet", "collier", "boucle", "creole", "pendentif", "broche", "manchette"),
     "Sacs & Maroquinerie": ("sac", "bag", "tote", "maroquinerie", "portefeuille", "pochette", "trousse", "wallet", "valise", "anse"),
-    "Bijoux": ("bijou", "bague", "bracelet", "collier", "boucle", "creole", "pendentif", "broche", "manchette", "bague"),
-    "Accessoires": ("ceinture", "belt", "chapeau", "bonnet", "casquette", "foulard", "echarpe", "lunette", "parapluie", "gant", "mitaine", "cravate", "epingle", "casque", "masque"),
-    "Lingerie": ("lingerie", "soutien", "brassiere", "culotte", "string", "tanga", "boxer", "calecon", "body", "peignoir", "pyjama", "nuit", "nightwear"),
+    "Accessoires": ("accessoire", "ceinture", "belt", "chapeau", "bonnet", "casquette", "foulard", "echarpe", "lunette", "parapluie", "gant", "mitaine", "cravate", "epingle", "casque", "masque"),
+    "Lingerie": ("lingerie", "soutien", "brassiere", "culotte", "string", "tanga", "boxer", "calecon", "body", "peignoir"),
     "Maillots De Bain": ("maillot", "bain", "swim", "bikini", "beach"),
     "Bébé & Enfant": ("bebe", "nouveau ne", "enfant", "fille", "garcon", "boutchou"),
+    "Pyjamas": ("pyjama", "nuit", "nightwear"),
 }
 
 
@@ -88,6 +84,9 @@ def _simple_match(product_type: str | None) -> str:
     if not product_type or not product_type.strip():
         return "Autres"
     t = _strip_accents(product_type.lower())
+    for cat in DEFAULT_CATEGORIES:
+        if t == _strip_accents(cat.lower()):
+            return cat
     for category, keywords in _CAT_KEYWORDS.items():
         if any(w in t for w in keywords):
             return category
