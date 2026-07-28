@@ -1,8 +1,10 @@
+import logging
 from dataclasses import dataclass, field
 
 from src.db.enrichment_repository import EnrichmentRepository
-from src.enrichment.factory import EnrichmentFactory
 from src.enrichment.models import Enrichment
+
+logger = logging.getLogger(__name__)
 
 
 @dataclass
@@ -12,13 +14,19 @@ class PersistStep:
     def process(self, enrichments: list[Enrichment | None]) -> tuple[int, int]:
         success = 0
         failures = 0
+        conn = self.repo._conn
         for enrichment in enrichments:
             if enrichment is None:
                 failures += 1
                 continue
-            self.repo.delete_by_product_id(enrichment.product_id)
-            params = EnrichmentFactory.to_db_params(enrichment)
-            self.repo.save_from_dict(**params)
-            success += 1
-        print(f"Persisted {success} enrichments, {failures} failures")
+            conn.execute("BEGIN TRANSACTION")
+            try:
+                self.repo.delete_by_product_id(enrichment.product_id)
+                self.repo.save_from_dict(**enrichment.to_dict)
+                conn.execute("COMMIT")
+                success += 1
+            except Exception:
+                conn.execute("ROLLBACK")
+                failures += 1
+        logger.info("Persisted %d enrichments, %d failures", success, failures)
         return (success, failures)

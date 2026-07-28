@@ -4,18 +4,6 @@ from src.enrichment.models import Enrichment
 class EnrichmentFactory:
 
     @staticmethod
-    def to_db_params(enrichment: Enrichment) -> dict:
-        return {
-            "product_id": enrichment.product_id,
-            "enriched_description": enrichment.enriched_description,
-            "material": enrichment.material,
-            "care_instructions": enrichment.care_instructions,
-            "style": enrichment.style,
-            "seo_keywords": enrichment.seo_keywords,
-            "model_used": enrichment.model_used,
-        }
-
-    @staticmethod
     def from_llm_response(product_id: int, llm_json: dict, model_used: str = "") -> Enrichment:
         enriched_description = llm_json.get("enriched_description", "")
         if not isinstance(enriched_description, str) or len(enriched_description.strip()) < 20:

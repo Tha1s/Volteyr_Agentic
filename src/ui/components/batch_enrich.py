@@ -1,4 +1,5 @@
 import threading
+import time
 
 import streamlit as st
 
@@ -28,6 +29,12 @@ def _run_enrichment(ids: list[int], large_model: bool, shared: dict) -> None:
 
         pipeline = EnrichmentPipeline()
 
+        def _on_progress(progress, success, failures):
+            shared["progress"] = progress
+            shared["success"] = success
+            shared["failures"] = failures
+            shared["status"] = f"{success} OK, {failures} échecs"
+
         if large_model and len(products_data) == 1:
             result = pipeline.run_single(products_data[0])
             if result:
@@ -35,33 +42,18 @@ def _run_enrichment(ids: list[int], large_model: bool, shared: dict) -> None:
                 shared["model"] = result.model_used
                 shared["success"] = 1
                 shared["failures"] = 0
-                shared["result"] = result
+                shared["progress"] = 1.0
                 shared["status"] = f"Enrichi avec {result.model_used}"
             else:
                 shared["success"] = 0
                 shared["failures"] = 1
+                shared["progress"] = 1.0
                 shared["status"] = "Échec de l'enrichissement"
         else:
-            total = len(products_data)
-            success = 0
-            failures = 0
-            batch_size = 5
-            for i in range(0, total, batch_size):
-                batch = products_data[i : i + batch_size]
-                results = pipeline.generate.process(batch)
-                for result in results:
-                    if result is not None:
-                        success += 1
-                    else:
-                        failures += 1
-                pipeline.persist.process([r for r in results if r is not None])
-                shared["progress"] = min(i + batch_size, total) / total
-                shared["success"] = success
-                shared["failures"] = failures
-                shared["status"] = f"{success} OK, {failures} échecs"
-            shared["progress"] = 1.0
+            success, failures = pipeline.run(products_data, on_progress=_on_progress)
             shared["success"] = success
             shared["failures"] = failures
+            shared["progress"] = 1.0
             shared["status"] = f"Terminé: {success} OK, {failures} échecs"
     except Exception as e:
         shared["status"] = f"Erreur: {e}"
@@ -110,8 +102,6 @@ def _render_enrichment_progress() -> None:
     shared = st.session_state.get("enrich_shared", {})
     progress = shared.get("progress", 0.0)
     status_text = shared.get("status", "Enrichissement en cours...")
-    success = shared.get("success", 0)
-    failures = shared.get("failures", 0)
 
     st.info("⚠️ L'enrichissement est en cours — ne changez pas de page.")
     st.progress(progress, text=status_text)
@@ -120,6 +110,5 @@ def _render_enrichment_progress() -> None:
         st.session_state.enriching = False
         st.rerun()
 
-    import time
     time.sleep(1)
     st.rerun()
