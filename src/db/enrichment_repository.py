@@ -9,14 +9,12 @@ if TYPE_CHECKING:
 
 
 class EnrichmentRepository:
-    def __init__(self):
-        self._conn = get_connection()
+    @property
+    def _conn(self):
+        return get_connection()
 
     def save(self, enrichment: Enrichment) -> int:
-        from src.enrichment.factory import EnrichmentFactory
-
-        params = EnrichmentFactory.to_db_params(enrichment)
-        return self.save_from_dict(**params)
+        return self.save_from_dict(**enrichment.to_dict)
 
     def save_from_dict(
         self,
@@ -128,7 +126,8 @@ class EnrichmentRepository:
 
         if q:
             conditions.append("e.enriched_description ILIKE ?")
-            params.append(f"%{q}%")
+            escaped = q.replace("%", "\\%").replace("_", "\\_")
+            params.append(f"%{escaped}%")
         if category:
             conditions.append("p.category = ?")
             params.append(category)
