@@ -52,11 +52,11 @@ with st.sidebar.expander("📂 Charger un CSV", expanded=st.session_state.get("d
                     count = load_csv_from_dictreader(reader)
                     st.session_state.data_loaded = count
                     st.rerun()
-                    except (ValueError, KeyError) as e:
-                        st.error(f"Erreur lors du chargement du CSV: {e}")
-                    except Exception:
-                        logger.exception("Erreur inattendue lors du chargement du CSV")
-                        st.error("Erreur inattendue lors du chargement du CSV")
+                except (ValueError, KeyError) as e:
+                    st.error(f"Erreur lors du chargement du CSV: {e}")
+                except Exception:
+                    logger.exception("Erreur inattendue lors du chargement du CSV")
+                    st.error("Erreur inattendue lors du chargement du CSV")
 
     if st.session_state.get("data_loaded", 0) > 0:
         st.success(f"✅ {st.session_state.data_loaded} produits chargés")
