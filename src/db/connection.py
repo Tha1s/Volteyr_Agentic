@@ -1,7 +1,7 @@
 import threading
 from pathlib import Path
 
-import duckdb
+import sqlite3
 
 DB_PATH = str(Path(__file__).resolve().parent.parent.parent / "data" / "volteyr.db")
 _local = threading.local()
@@ -23,9 +23,11 @@ def get_connection():
         return _override_conn
     if not hasattr(_local, "connection") or _local.connection is None:
         try:
-            _local.connection = duckdb.connect(DB_PATH)
+            _local.connection = sqlite3.connect(DB_PATH, timeout=10)
+            _local.connection.execute("PRAGMA journal_mode=WAL")
+            _local.connection.execute("PRAGMA foreign_keys=ON")
         except Exception as e:
-            raise RuntimeError(f"Failed to connect to DuckDB: {e}") from e
+            raise RuntimeError(f"Failed to connect to database: {e}") from e
     return _local.connection
 
 
