@@ -1,12 +1,14 @@
 from src.enrichment.models import Enrichment
 
+MIN_DESCRIPTION_LENGTH = 20
+
 
 class EnrichmentFactory:
 
     @staticmethod
     def from_llm_response(product_id: int, llm_json: dict, model_used: str = "") -> Enrichment:
         enriched_description = llm_json.get("enriched_description", "")
-        if not isinstance(enriched_description, str) or len(enriched_description.strip()) < 20:
+        if not isinstance(enriched_description, str) or len(enriched_description.strip()) < MIN_DESCRIPTION_LENGTH:
             enriched_description = ""
 
         def _get(key: str) -> str:

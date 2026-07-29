@@ -16,14 +16,6 @@ class ProductResponse(BaseModel):
     model_config = {"from_attributes": True}
 
 
-class SearchParams(BaseModel):
-    q: str | None = None
-    category: str | None = None
-    vendor: str | None = None
-    limit: int = 20
-    offset: int = 0
-
-
 class SearchResponse(BaseModel):
     results: list[ProductResponse]
     total: int

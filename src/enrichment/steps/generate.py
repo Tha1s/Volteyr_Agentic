@@ -14,15 +14,10 @@ logger = logging.getLogger(__name__)
 @dataclass
 class GenerateStep:
     max_retries: int = 1
+    max_workers: int = 4
     use_large_model: bool = False
 
-    def _call_llm(self, product: dict, strategy, model_used: str) -> Enrichment | None:
-        prompt = ENRICHMENT_USER.format(
-            product_type=product.get("product_type", ""),
-            category=product.get("category", ""),
-            vendor=product.get("vendor", ""),
-            description=product.get("description", ""),
-        )
+    def _call_llm(self, prompt: str, product_id: int, strategy, model_used: str) -> Enrichment | None:
         for attempt in range(self.max_retries + 1):
             response = strategy.generate(prompt, ENRICHMENT_SYSTEM)
             if response:
@@ -30,7 +25,7 @@ class GenerateStep:
                     data = json.loads(response)
                     if isinstance(data, dict):
                         return EnrichmentFactory.from_llm_response(
-                            product["product_id"], data, model_used
+                            product_id, data, model_used
                         )
                     break
                 except json.JSONDecodeError:
@@ -44,11 +39,21 @@ class GenerateStep:
         strategy = get_strategy(self.use_large_model)
         model_used = strategy.model
 
+        prompts = [
+            ENRICHMENT_USER.format(
+                product_type=p.get("product_type", ""),
+                category=p.get("category", ""),
+                vendor=p.get("vendor", ""),
+                description=p.get("description", ""),
+            )
+            for p in products
+        ]
+
         results: list[Enrichment | None] = [None] * total
-        max_workers = min(4, total)
+        max_workers = min(self.max_workers, total)
         with ThreadPoolExecutor(max_workers=max_workers) as executor:
             futures = {
-                executor.submit(self._call_llm, p, strategy, model_used): i
+                executor.submit(self._call_llm, prompts[i], p["product_id"], strategy, model_used): i
                 for i, p in enumerate(products)
             }
             for future in as_completed(futures):

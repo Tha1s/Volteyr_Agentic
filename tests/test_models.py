@@ -2,7 +2,6 @@ import pytest
 
 from src.api.models import (
     ProductResponse,
-    SearchParams,
     SearchResponse,
     StatsResponse,
 )
@@ -52,23 +51,6 @@ class TestProductResponse:
         assert data["care_instructions"] is None
         assert data["style"] is None
         assert data["seo_keywords"] is None
-
-
-class TestSearchParams:
-    def test_default_values(self):
-        params = SearchParams()
-        assert params.q is None
-        assert params.category is None
-        assert params.vendor is None
-        assert params.limit == 20
-        assert params.offset == 0
-
-    def test_custom_values(self):
-        params = SearchParams(q="robe", category="Robes", limit=10, offset=5)
-        assert params.q == "robe"
-        assert params.category == "Robes"
-        assert params.limit == 10
-        assert params.offset == 5
 
 
 class TestSearchResponse:

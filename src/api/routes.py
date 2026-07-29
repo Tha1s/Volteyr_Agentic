@@ -2,6 +2,7 @@ from fastapi import APIRouter, Depends, HTTPException, Path, Query
 
 from src.api.dependencies import get_enrichment_repo, get_product_repo
 from src.api.models import ProductResponse, SearchResponse
+from src.config.constants import DEFAULT_SEARCH_LIMIT
 from src.db.enrichment_repository import EnrichmentRepository
 from src.db.product_repository import ProductRepository
 
@@ -13,7 +14,7 @@ async def search_products(
     q: str | None = Query(None),
     category: str | None = Query(None),
     vendor: str | None = Query(None),
-    limit: int = Query(20, ge=1, le=100),
+    limit: int = Query(DEFAULT_SEARCH_LIMIT, ge=1, le=100),
     offset: int = Query(0, ge=0),
     repo: EnrichmentRepository = Depends(get_enrichment_repo),
 ):

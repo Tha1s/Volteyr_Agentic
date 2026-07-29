@@ -1,4 +1,5 @@
 import json
+import logging
 
 import requests
 
@@ -6,6 +7,7 @@ OLLAMA_URL = "http://localhost:11434/api/generate"
 OLLAMA_TIMEOUT_LARGE = 120
 OLLAMA_TIMEOUT_SMALL = 30
 
+logger = logging.getLogger(__name__)
 _session = requests.Session()
 
 
@@ -32,10 +34,10 @@ def generate(
         data = resp.json()
         return data.get("response")
     except requests.RequestException as e:
-        print(f"LLM request failed: {e}")
+        logger.warning("LLM request failed (model=%s, timeout=%s): %s", model, timeout, e)
         return None
     except json.JSONDecodeError as e:
-        print(f"LLM response not valid JSON: {e}")
+        logger.warning("LLM response not valid JSON (model=%s): %s", model, e)
         return None
 
 

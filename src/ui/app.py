@@ -15,7 +15,6 @@ from src.ui.components.product_table import show_product_table
 from src.ui.components.batch_enrich import show_batch_enrich
 from src.ui.components.export import show_export_page
 from src.db.product_repository import ProductRepository
-from src.db.schema import init_schema
 from src.db.connection import get_connection
 
 logger = logging.getLogger(__name__)

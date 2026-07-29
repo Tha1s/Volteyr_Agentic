@@ -19,14 +19,17 @@ class PersistStep:
             if enrichment is None:
                 failures += 1
                 continue
-            conn.execute("BEGIN TRANSACTION")
+            conn.execute("SAVEPOINT sp")
             try:
                 self.repo.delete_by_product_id(enrichment.product_id)
                 self.repo.save_from_dict(**enrichment.to_dict)
-                conn.execute("COMMIT")
+                conn.execute("RELEASE sp")
                 success += 1
             except Exception:
-                conn.execute("ROLLBACK")
+                conn.execute("ROLLBACK TO sp")
+                logger.exception(
+                    "Erreur persisting enrichment for product %s", enrichment.product_id
+                )
                 failures += 1
         logger.info("Persisted %d enrichments, %d failures", success, failures)
         return (success, failures)

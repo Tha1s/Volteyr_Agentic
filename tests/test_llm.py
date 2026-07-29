@@ -3,7 +3,7 @@ import requests
 from unittest.mock import patch, MagicMock
 
 from src.llm.client import generate, check_ollama
-from src.llm.strategies import SmallModelStrategy, LargeModelStrategy, get_strategy
+from src.llm.strategies import OllamaStrategy, get_strategy
 from src.llm.prompts import ENRICHMENT_SYSTEM, ENRICHMENT_USER
 
 
@@ -44,19 +44,19 @@ def test_check_ollama_failure():
 
 
 def test_small_model_strategy():
-    strat = SmallModelStrategy()
+    strat = OllamaStrategy()
     assert strat.model == "qwen2.5:1.5b"
     assert strat.timeout == 30
 
 
 def test_large_model_strategy():
-    strat = LargeModelStrategy()
+    strat = OllamaStrategy(model="qwen2.5:7b", timeout=120)
     assert strat.timeout == 120
 
 
 def test_get_strategy():
-    assert isinstance(get_strategy(False), SmallModelStrategy)
-    assert isinstance(get_strategy(True), LargeModelStrategy)
+    assert isinstance(get_strategy(False), OllamaStrategy)
+    assert isinstance(get_strategy(True), OllamaStrategy)
 
 
 def test_prompts_format():
