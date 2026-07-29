@@ -3,7 +3,6 @@ __pycache__/
 .pytest_cache/
 .vscode/
 data/volteyr.db
+data/volteyr.db-shm
+data/volteyr.db-wal
 config/categories.yaml
-aidd_docs/
-conversations/
-AGENTS.md

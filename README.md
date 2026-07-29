@@ -8,8 +8,8 @@ Le catalogue e-commerce contient des milliers de produits de marques
 basiques. Ce système génère via IA des descriptions enrichies (matière,
 entretien, style, mots-clés SEO) et les rend recherchables via API REST.
 
-**Stack :** Python 3.12 — Streamlit — FastAPI — DuckDB — Ollama + Qwen2.5
-**Tests :** pytest — 115 tests — base en mémoire — isolation totale
+**Stack :** Python 3.12 — Streamlit — FastAPI — SQLite — Ollama + Qwen2.5
+**Tests :** pytest — 123 tests — base en mémoire — isolation totale
 
 ---
 
@@ -54,7 +54,7 @@ make all          # Crée .venv + pip install -r requirements.txt
 make api          # FastAPI sur http://localhost:8000
 make streamlit    # Streamlit sur http://localhost:8501
 make dev          # Les deux simultanément (API en arrière-plan)
-make test         # 115 tests
+make test         # 123 tests
 make fclean       # Supprime .venv + caches
 ```
 
@@ -75,7 +75,7 @@ puis naviguer vers l'onglet Enrichissement pour générer des descriptions enric
        │                   │
        ▼                   ▼
 ┌──────────────────────────────────────┐
-│         DuckDB  (volteyr.db)         │
+│         SQLite  (volteyr.db)         │
 │  ┌──────────┐  ┌──────────────────┐  │
 │  │ products │  │ enrichissements  │  │
 │  │1000 rows │  │    ~10 rows      │  │
@@ -97,17 +97,23 @@ un `close()` + `reconnect()`.
 
 ```python
 class ProductRepository:
+    _conn = None
+
     @property
     def conn(self):
-        return get_connection()  # frais à chaque accès, jamais de connexion périmée
+        if self._conn is None:
+            self._conn = get_connection()
+        return self._conn  # connexion unique en cache, jamais de connexion périmée
 ```
 
-**Strategy.** Le client LLM expose deux stratégies interchangeables :
+**Strategy.** `OllamaStrategy` expose un modèle paramétrable :
 
-| Stratégie | Modèle | Timeout | Usage |
-|---|---|---|---|
-| `SmallModelStrategy` | Qwen2.5:1.5b | 30s | Enrichissement par lots (Streamlit) |
-| `LargeModelStrategy` | Qwen2.5:7b | 120s | Produit unique (API) |
+| Modèle | Timeout | Usage |
+|---|---|---|
+| Qwen2.5:1.5b | 30s | Enrichissement par lots (Streamlit) |
+| Qwen2.5:7b | 120s | Produit unique (API) |
+
+`get_strategy(use_large=True/False)` instancie le modèle adapté.
 
 **Factory.** `EnrichmentFactory.from_llm_response()` transforme le JSON brut du LLM
 en objet `Enrichment` typé avec validation : si la description générée fait moins
@@ -119,14 +125,13 @@ de 20 caractères, elle est rejetée.
 GenerateStep (ThreadPoolExecutor, max 4 workers)
     → Appel Ollama avec retry (1 tentative supplémentaire)
     → Parse JSON / valide isinstance dict / break si non-dict
-PersistStep (BEGIN TRANSACTION)
-    → DELETE ancien enrichissement
-    → INSERT nouveau
-    → COMMIT ou ROLLBACK
+PersistStep (SAVEPOINT sp)
+    → INSERT OR REPLACE (conserve l'historique)
+    → RELEASE sp ou ROLLBACK TO sp si échec
 ```
 
 **Override Pattern.** Pour les tests, `set_connection(conn)` remplace globalement
-la connexion DuckDB via une variable `_override_conn`. Contrairement à
+la connexion SQLite via une variable `_override_conn`. Contrairement à
 `threading.local()`, cela traverse les threads — nécessaire car le TestClient de
 Starlette exécute les requêtes dans un thread `anyio` séparé.
 
@@ -140,7 +145,7 @@ Tests :      _override_conn = conn → get_connection() → mémoire
 ```
 ├── Makefile              → Commandes (all, venv, setup, api, streamlit, dev, test, fclean)
 ├── requirements.txt      → Dépendances Python (versions pinées avec ~=)
-├── .gitignore            → .venv, __pycache__, data/volteyr.db, config/categories.yaml
+├── .gitignore            → .venv, __pycache__, data/volteyr.db, *.db-shm, *.db-wal, config/categories.yaml
 ├── data/
 │   └── products.csv      → 1000 produits Shopify
 ├── src/
@@ -150,8 +155,9 @@ Tests :      _override_conn = conn → get_connection() → mémoire
 │   │   ├── routes_meta.py→ Stats + catégories + health
 │   │   └── models.py     → Contrats : ProductResponse, SearchResponse, StatsResponse
 │   ├── config/
-│   │   └── categories.py → Normalisation 402 types → 14 catégories
-│   ├── db/               → Persistance DuckDB
+│   │   ├── categories.py → Normalisation 402 types → 14 catégories
+│   │   └── constants.py  → Seuils qualité, limite pagination
+│   ├── db/               → Persistance SQLite
 │   │   ├── connection.py            → Thread-local + override pour tests
 │   │   ├── schema.py                → CREATE TABLE IF NOT EXISTS
 │   │   ├── loader.py                → Import CSV avec normalisation
@@ -167,11 +173,11 @@ Tests :      _override_conn = conn → get_connection() → mémoire
 │   ├── llm/              → Interface Ollama
 │   │   ├── client.py     → HTTP client avec timeout paramétrable
 │   │   ├── prompts.py    → Template de prompt (français, anti-hallucination)
-│   │   └── strategies.py → SmallModel / LargeModel avec leur timeout
+│   │   └── strategies.py → OllamaStrategy paramétrable (modèle + timeout)
 │   └── ui/               → Interface Streamlit
 │       ├── app.py        → Navigation, sidebar, cache
 │       └── components/   → dashboard, filters, product_table, batch_enrich, export
-└── tests/                → 115 tests (7 fichiers)
+└── tests/                → 123 tests (9 fichiers)
 ```
 
 ---
@@ -336,10 +342,9 @@ Les correspondances sont persistées dans `config/categories.yaml` (généré au
    ├── Prompt en français structuré
    └── Retry : 1 tentative supplémentaire en cas d'échec du parsing JSON
 4. PersistStep → sauvegarde transactionnelle
-   ├── BEGIN TRANSACTION
-   ├── DELETE ancien enrichissement
-   ├── INSERT nouveau
-   └── COMMIT ou ROLLBACK si échec
+   ├── SAVEPOINT sp
+   ├── INSERT OR REPLACE (conserve l'historique)
+   └── RELEASE sp ou ROLLBACK TO sp si échec
 5. Callback on_progress → mise à jour de l'interface en temps réel
 ```
 
@@ -367,18 +372,19 @@ accessible.
 make test
 ```
 
-**115 tests** dans 7 fichiers, tous avec DuckDB en mémoire :
+**123 tests** dans 9 fichiers, tous avec SQLite en mémoire :
 
 | Fichier | Tests | Couverture |
 |---|---|---|
 | `test_api.py` | 13 | Tous les endpoints : health, stats, search, detail, 404 |
-| `test_db.py` | ~30 | Repositories : CRUD, filtres, pagination, recherche ILIKE |
-| `test_enrichment.py` | ~20 | Factory, generate step, persist step, pipeline |
-| `test_categories.py` | ~15 | Normalisation 14 catégories, edge cases (accents, child suffixes) |
+| `test_db.py` | 38 | Repositories : CRUD, filtres, pagination, recherche ILIKE, stats |
+| `test_enrichment.py` | 24 | Factory, generate step, persist step, pipeline |
+| `test_categories.py` | 9 | Normalisation 14 catégories, edge cases (accents, child suffixes) |
 | `test_connection.py` | 4 | Singleton par thread, close/reconnect, création fichier |
 | `test_loader.py` | 8 | Import CSV, validation, idempotence |
+| `test_llm.py` | 8 | OllamaStrategy, get_strategy, generate |
 | `test_models.py` | 12 | Pydantic : ProductResponse, SearchResponse, StatsResponse |
-| `test_ui_utils.py` | 8 | Utilitaires UI |
+| `test_ui_utils.py` | 10 | Utilitaires UI |
 
 **Principe d'isolation :** chaque test crée sa base en mémoire via `set_connection()`.
 Cette variable globale (`_override_conn`) garantit que toutes les requêtes —
