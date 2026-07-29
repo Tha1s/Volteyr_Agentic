@@ -2,7 +2,7 @@ import tempfile
 from pathlib import Path
 from unittest.mock import patch
 
-import duckdb
+import sqlite3
 
 import src.db.connection as conn_mod
 from src.db.connection import get_connection, close
@@ -43,7 +43,7 @@ def test_temp_file_created_on_connect():
         monkey_path = str(db_path)
         with patch.object(conn_mod._local, "connection", None):
             try:
-                conn = duckdb.connect(monkey_path)
+                conn = sqlite3.connect(monkey_path)
                 conn.execute("CREATE TABLE test (id INT)")
                 conn.commit()
                 assert db_path.exists()

@@ -12,6 +12,7 @@ import src.db.connection as conn_mod
 @pytest.fixture
 def db_conn():
     conn = sqlite3.connect(":memory:")
+    conn.row_factory = sqlite3.Row
     conn_mod._local.connection = conn
     init_schema()
     yield conn
@@ -240,6 +241,7 @@ class TestInitSchemaIdempotency:
     @pytest.fixture(autouse=True)
     def setup(self):
         conn = sqlite3.connect(":memory:")
+        conn.row_factory = sqlite3.Row
         conn_mod._local.connection = conn
         from src.db.schema import init_schema
         self.init_schema = init_schema

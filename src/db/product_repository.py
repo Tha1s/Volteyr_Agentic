@@ -1,10 +1,15 @@
+from src.config.constants import DESC_QUALITY_LONG, DESC_QUALITY_MEDIUM, DESC_QUALITY_SHORT
 from src.db.connection import get_connection
 
 
 class ProductRepository:
+    _conn = None
+
     @property
     def conn(self):
-        return get_connection()
+        if self._conn is None:
+            self._conn = get_connection()
+        return self._conn
 
     def count_all(self) -> int:
         return self.conn.execute("SELECT COUNT(*) FROM products").fetchone()[0]
@@ -23,13 +28,13 @@ class ProductRepository:
         )
 
     def count_medium(self) -> int:
-        return self._count_with("LENGTH(description) >= 50 AND LENGTH(description) < 200")
+        return self._count_with(f"LENGTH(description) >= {DESC_QUALITY_SHORT} AND LENGTH(description) < {DESC_QUALITY_MEDIUM}")
 
     def count_long(self) -> int:
-        return self._count_with("LENGTH(description) >= 200 AND LENGTH(description) < 500")
+        return self._count_with(f"LENGTH(description) >= {DESC_QUALITY_MEDIUM} AND LENGTH(description) < {DESC_QUALITY_LONG}")
 
     def count_very_long(self) -> int:
-        return self._count_with("LENGTH(description) >= 500")
+        return self._count_with(f"LENGTH(description) >= {DESC_QUALITY_LONG}")
 
     def count_by_category(self) -> list[tuple[str, int]]:
         return self.conn.execute(
@@ -42,32 +47,30 @@ class ProductRepository:
         ).fetchall()
 
     def find_all(self, limit: int = 100, offset: int = 0) -> list[dict]:
-        cursor = self.conn.execute(
-            "SELECT * FROM products ORDER BY product_id LIMIT ? OFFSET ?", [limit, offset]
-        )
-        columns = [desc[0] for desc in cursor.description]
-        return [dict(zip(columns, row)) for row in cursor.fetchall()]
+        return [
+            dict(row)
+            for row in self.conn.execute(
+                "SELECT * FROM products ORDER BY product_id LIMIT ? OFFSET ?", [limit, offset]
+            ).fetchall()
+        ]
 
     def find_by_id(self, product_id: int) -> dict | None:
-        cursor = self.conn.execute(
+        row = self.conn.execute(
             "SELECT * FROM products WHERE product_id = ?", [product_id]
-        )
-        columns = [desc[0] for desc in cursor.description]
-        row = cursor.fetchone()
-        if row is None:
-            return None
-        return dict(zip(columns, row))
+        ).fetchone()
+        return dict(row) if row else None
 
     def find_by_ids(self, ids: list[int]) -> list[dict]:
         if not ids:
             return []
         placeholders = ",".join("?" * len(ids))
-        cursor = self.conn.execute(
-            f"SELECT * FROM products WHERE product_id IN ({placeholders}) ORDER BY product_id",
-            ids,
-        )
-        columns = [desc[0] for desc in cursor.description]
-        return [dict(zip(columns, row)) for row in cursor.fetchall()]
+        return [
+            dict(row)
+            for row in self.conn.execute(
+                f"SELECT * FROM products WHERE product_id IN ({placeholders}) ORDER BY product_id",
+                ids,
+            ).fetchall()
+        ]
 
     def find_filtered(
         self,
@@ -82,13 +85,13 @@ class ProductRepository:
             if quality == "Vide":
                 conditions.append("(description IS NULL OR description = '')")
             elif quality == "<50c":
-                conditions.append("(description IS NOT NULL AND description != '' AND LENGTH(description) < 50)")
+                conditions.append(f"(description IS NOT NULL AND description != '' AND LENGTH(description) < {DESC_QUALITY_SHORT})")
             elif quality == "50-200c":
-                conditions.append("(description IS NOT NULL AND description != '' AND LENGTH(description) >= 50 AND LENGTH(description) < 200)")
+                conditions.append(f"(description IS NOT NULL AND description != '' AND LENGTH(description) >= {DESC_QUALITY_SHORT} AND LENGTH(description) < {DESC_QUALITY_MEDIUM})")
             elif quality == "200-500c":
-                conditions.append("(description IS NOT NULL AND description != '' AND LENGTH(description) >= 200 AND LENGTH(description) < 500)")
+                conditions.append(f"(description IS NOT NULL AND description != '' AND LENGTH(description) >= {DESC_QUALITY_MEDIUM} AND LENGTH(description) < {DESC_QUALITY_LONG})")
             elif quality == ">500c":
-                conditions.append("(description IS NOT NULL AND description != '' AND LENGTH(description) >= 500)")
+                conditions.append(f"(description IS NOT NULL AND description != '' AND LENGTH(description) >= {DESC_QUALITY_LONG})")
 
         if categories:
             placeholders = ",".join("?" * len(categories))
@@ -101,28 +104,29 @@ class ProductRepository:
             params.extend(vendors)
 
         where_clause = " AND ".join(conditions) if conditions else "1=1"
-        cursor = self.conn.execute(
-            f"SELECT * FROM products WHERE {where_clause} ORDER BY product_id", params
-        )
-        columns = [desc[0] for desc in cursor.description]
-        return [dict(zip(columns, row)) for row in cursor.fetchall()]
+        return [
+            dict(row)
+            for row in self.conn.execute(
+                f"SELECT * FROM products WHERE {where_clause} ORDER BY product_id", params
+            ).fetchall()
+        ]
 
     def get_distinct_categories(self) -> list[str]:
         return [
-            row[0]
+            row["category"]
             for row in self.conn.execute(
                 "SELECT DISTINCT category FROM products ORDER BY category"
             ).fetchall()
-            if row[0] is not None
+            if row["category"] is not None
         ]
 
     def get_distinct_vendors(self) -> list[str]:
         return [
-            row[0]
+            row["vendor"]
             for row in self.conn.execute(
                 "SELECT DISTINCT vendor FROM products ORDER BY vendor"
             ).fetchall()
-            if row[0] is not None
+            if row["vendor"] is not None
         ]
 
     def get_vendors_by_categories(self, categories: list[str]) -> list[str]:
@@ -130,10 +134,10 @@ class ProductRepository:
             return []
         placeholders = ",".join("?" * len(categories))
         return [
-            row[0]
+            row["vendor"]
             for row in self.conn.execute(
                 f"SELECT DISTINCT vendor FROM products WHERE category IN ({placeholders}) ORDER BY vendor",
                 categories,
             ).fetchall()
-            if row[0] is not None
+            if row["vendor"] is not None
         ]

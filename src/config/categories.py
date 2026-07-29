@@ -1,3 +1,4 @@
+import copy
 import functools
 import re
 import unicodedata
@@ -6,6 +7,7 @@ from pathlib import Path
 import yaml
 
 CONFIG_PATH = Path(__file__).resolve().parent.parent.parent / "config" / "categories.yaml"
+MAX_CHAIN_LENGTH = 10
 
 DEFAULT_CATEGORIES = [
     "Pantalons & Shorts", "Hauts", "Vestes & Manteaux", "Pulls & Maille",
@@ -31,7 +33,7 @@ def load_category_map() -> dict[str, str]:
     mapping["default"] = default
     for cat in DEFAULT_CATEGORIES:
         mapping.setdefault(cat, cat)
-    return mapping
+    return copy.deepcopy(mapping)
 
 
 def _save_category_map(mapping: dict[str, str]) -> None:
@@ -110,7 +112,7 @@ def normalize_product_type(
     default = mapping.get("default", "Autres")
 
     # Resolve chain, with terminal guard
-    for _ in range(10):
+    for _ in range(MAX_CHAIN_LENGTH):
         if name in mapping:
             if mapping[name] == name:
                 return name

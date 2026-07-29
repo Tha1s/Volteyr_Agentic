@@ -14,7 +14,7 @@ class PersistStep:
     def process(self, enrichments: list[Enrichment | None]) -> tuple[int, int]:
         success = 0
         failures = 0
-        conn = self.repo._conn
+        conn = self.repo.conn
         for enrichment in enrichments:
             if enrichment is None:
                 failures += 1

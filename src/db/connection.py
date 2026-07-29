@@ -24,6 +24,7 @@ def get_connection():
     if not hasattr(_local, "connection") or _local.connection is None:
         try:
             _local.connection = sqlite3.connect(DB_PATH, timeout=10)
+            _local.connection.row_factory = sqlite3.Row
             _local.connection.execute("PRAGMA journal_mode=WAL")
             _local.connection.execute("PRAGMA foreign_keys=ON")
         except Exception as e:

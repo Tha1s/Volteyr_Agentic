@@ -9,9 +9,13 @@ if TYPE_CHECKING:
 
 
 class EnrichmentRepository:
+    _conn = None
+
     @property
-    def _conn(self):
-        return get_connection()
+    def conn(self):
+        if self._conn is None:
+            self._conn = get_connection()
+        return self._conn
 
     def save(self, enrichment: Enrichment) -> int:
         return self.save_from_dict(**enrichment.to_dict)
@@ -26,27 +30,23 @@ class EnrichmentRepository:
         seo_keywords: str = "",
         model_used: str = "",
     ) -> int:
-        result = self._conn.execute(
-            """
+        cursor = self.conn.execute("""
             INSERT INTO enrichissements
                 (product_id, enriched_description, material, care_instructions, style, seo_keywords, model_used)
             VALUES (?, ?, ?, ?, ?, ?, ?)
-            RETURNING id
-            """,
-            (
-                product_id,
-                enriched_description,
-                material,
-                care_instructions,
-                style,
-                seo_keywords,
-                model_used,
-            ),
-        )
-        return result.fetchone()[0]
+        """, (
+            product_id,
+            enriched_description,
+            material,
+            care_instructions,
+            style,
+            seo_keywords,
+            model_used,
+        ))
+        return cursor.lastrowid
 
     def find_by_product_id(self, product_id: int) -> dict | None:
-        row = self._conn.execute(
+        row = self.conn.execute(
             """
             SELECT id, product_id, enriched_description, material, care_instructions,
                    style, seo_keywords, model_used, created_at
@@ -57,28 +57,18 @@ class EnrichmentRepository:
             """,
             (product_id,),
         ).fetchone()
-        if row is None:
-            return None
-        return {
-            "id": row[0],
-            "product_id": row[1],
-            "enriched_description": row[2],
-            "material": row[3],
-            "care_instructions": row[4],
-            "style": row[5],
-            "seo_keywords": row[6],
-            "model_used": row[7],
-            "created_at": row[8],
-        }
+        return dict(row) if row else None
 
     def find_enriched_ids(self) -> set[int]:
-        rows = self._conn.execute(
-            "SELECT DISTINCT product_id FROM enrichissements"
-        ).fetchall()
-        return {row[0] for row in rows}
+        return {
+            row["product_id"]
+            for row in self.conn.execute(
+                "SELECT DISTINCT product_id FROM enrichissements"
+            ).fetchall()
+        }
 
     def delete_by_product_id(self, product_id: int) -> None:
-        self._conn.execute(
+        self.conn.execute(
             "DELETE FROM enrichissements WHERE product_id = ?", (product_id,)
         )
 
@@ -97,35 +87,17 @@ class EnrichmentRepository:
             params.append(category)
         query += " ORDER BY p.product_id"
 
-        rows = self._conn.execute(query, params).fetchall()
         return [
-            {
-                "product_id": row[0],
-                "category": row[1],
-                "enriched_description": row[2],
-                "material": row[3],
-                "care_instructions": row[4],
-                "style": row[5],
-                "seo_keywords": row[6],
-                "model_used": row[7],
-                "created_at": row[8],
-            }
-            for row in rows
+            dict(row)
+            for row in self.conn.execute(query, params).fetchall()
         ]
 
-    def search(
-        self,
-        q: str | None = None,
-        category: str | None = None,
-        vendor: str | None = None,
-        limit: int = 20,
-        offset: int = 0,
-    ) -> tuple[list[dict], int]:
+    def _build_search_query(self, q, category, vendor):
         conditions = []
         params = []
 
         if q:
-            conditions.append("e.enriched_description ILIKE ?")
+            conditions.append("LOWER(e.enriched_description) LIKE LOWER(?)")
             escaped = q.replace("%", "\\%").replace("_", "\\_")
             params.append(f"%{escaped}%")
         if category:
@@ -138,8 +110,19 @@ class EnrichmentRepository:
         where_clause = ""
         if conditions:
             where_clause = "WHERE " + " AND ".join(conditions)
+        return where_clause, params
 
-        count_row = self._conn.execute(
+    def search(
+        self,
+        q: str | None = None,
+        category: str | None = None,
+        vendor: str | None = None,
+        limit: int = 20,
+        offset: int = 0,
+    ) -> tuple[list[dict], int]:
+        where_clause, params = self._build_search_query(q, category, vendor)
+
+        total = self.conn.execute(
             f"""
             SELECT COUNT(*)
             FROM products p
@@ -147,10 +130,9 @@ class EnrichmentRepository:
             {where_clause}
             """,
             params,
-        ).fetchone()
-        total = count_row[0]
+        ).fetchone()[0]
 
-        rows = self._conn.execute(
+        rows = self.conn.execute(
             f"""
             SELECT e.id, e.product_id, e.enriched_description, e.material,
                    e.care_instructions, e.style, e.seo_keywords, e.model_used,
@@ -165,25 +147,4 @@ class EnrichmentRepository:
             params + [limit, offset],
         ).fetchall()
 
-        results = []
-        for row in rows:
-            results.append(
-                {
-                    "id": row[0],
-                    "product_id": row[1],
-                    "enriched_description": row[2],
-                    "material": row[3],
-                    "care_instructions": row[4],
-                    "style": row[5],
-                    "seo_keywords": row[6],
-                    "model_used": row[7],
-                    "created_at": row[8],
-                    "product_type": row[9],
-                    "category": row[10],
-                    "product_tags": row[11],
-                    "vendor": row[12],
-                    "description": row[13],
-                }
-            )
-
-        return results, total
+        return [dict(row) for row in rows], total

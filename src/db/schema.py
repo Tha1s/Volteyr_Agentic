@@ -5,30 +5,27 @@ def init_schema():
     conn = get_connection()
     conn.execute("""
         CREATE TABLE IF NOT EXISTS products (
-            product_id BIGINT PRIMARY KEY,
-            product_type VARCHAR,
-            category VARCHAR,
-            product_tags VARCHAR,
-            images_array VARCHAR,
-            vendor VARCHAR,
-            inventory_quantity BIGINT,
-            gross_amount_exc_tax_product DOUBLE,
-            description VARCHAR
+            product_id INTEGER PRIMARY KEY,
+            product_type TEXT,
+            category TEXT,
+            product_tags TEXT,
+            images_array TEXT,
+            vendor TEXT,
+            inventory_quantity INTEGER,
+            gross_amount_exc_tax_product REAL,
+            description TEXT
         )
     """)
     conn.execute("""
-        CREATE SEQUENCE IF NOT EXISTS enrichissements_seq
-    """)
-    conn.execute("""
         CREATE TABLE IF NOT EXISTS enrichissements (
-            id BIGINT PRIMARY KEY DEFAULT nextval('enrichissements_seq'),
-            product_id BIGINT,
-            enriched_description VARCHAR,
-            material VARCHAR,
-            care_instructions VARCHAR,
-            style VARCHAR,
-            seo_keywords VARCHAR,
-            model_used VARCHAR,
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            product_id INTEGER,
+            enriched_description TEXT,
+            material TEXT,
+            care_instructions TEXT,
+            style TEXT,
+            seo_keywords TEXT,
+            model_used TEXT,
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
             FOREIGN KEY (product_id) REFERENCES products(product_id)
         )

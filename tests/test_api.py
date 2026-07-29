@@ -1,5 +1,5 @@
 import pytest
-import duckdb
+import sqlite3
 from fastapi.testclient import TestClient
 
 from src.api.main import app
@@ -11,7 +11,8 @@ from src.enrichment.models import Enrichment
 
 @pytest.fixture
 def db_conn():
-    conn = duckdb.connect(":memory:")
+    conn = sqlite3.connect(":memory:", check_same_thread=False)
+    conn.row_factory = sqlite3.Row
     set_connection(conn)
     init_schema()
     yield conn
