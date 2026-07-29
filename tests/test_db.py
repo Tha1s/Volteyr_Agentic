@@ -1,44 +1,19 @@
 import pytest
-import duckdb
+import sqlite3
 
 from src.db.connection import get_connection, close
 from src.db.product_repository import ProductRepository
 from src.db.enrichment_repository import EnrichmentRepository
 from src.enrichment.models import Enrichment
+from src.db.schema import init_schema
 import src.db.connection as conn_mod
 
 
 @pytest.fixture
 def db_conn():
-    conn = duckdb.connect(":memory:")
+    conn = sqlite3.connect(":memory:")
     conn_mod._local.connection = conn
-    conn.execute("""
-        CREATE TABLE products (
-            product_id BIGINT PRIMARY KEY,
-            product_type VARCHAR,
-            category VARCHAR,
-            product_tags VARCHAR,
-            images_array VARCHAR,
-            vendor VARCHAR,
-            inventory_quantity BIGINT,
-            gross_amount_exc_tax_product DOUBLE,
-            description VARCHAR
-        )
-    """)
-    conn.execute("CREATE SEQUENCE enrichissements_seq START 1")
-    conn.execute("""
-        CREATE TABLE enrichissements (
-            id BIGINT PRIMARY KEY DEFAULT nextval('enrichissements_seq'),
-            product_id BIGINT,
-            enriched_description VARCHAR,
-            material VARCHAR,
-            care_instructions VARCHAR,
-            style VARCHAR,
-            seo_keywords VARCHAR,
-            model_used VARCHAR,
-            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-        )
-    """)
+    init_schema()
     yield conn
     close()
 
@@ -264,7 +239,7 @@ class TestInitSchemaIdempotency:
 
     @pytest.fixture(autouse=True)
     def setup(self):
-        conn = duckdb.connect(":memory:")
+        conn = sqlite3.connect(":memory:")
         conn_mod._local.connection = conn
         from src.db.schema import init_schema
         self.init_schema = init_schema
@@ -279,11 +254,11 @@ class TestInitSchemaIdempotency:
     def test_init_schema_twice_no_duplicates(self):
         self.init_schema()
         count_before = self.conn.execute(
-            "SELECT COUNT(*) FROM information_schema.tables WHERE table_name = 'products'"
+            "SELECT COUNT(*) FROM sqlite_master WHERE type='table' AND name='products'"
         ).fetchone()[0]
         self.init_schema()
         count_after = self.conn.execute(
-            "SELECT COUNT(*) FROM information_schema.tables WHERE table_name = 'products'"
+            "SELECT COUNT(*) FROM sqlite_master WHERE type='table' AND name='products'"
         ).fetchone()[0]
         assert count_before == 1
         assert count_after == 1
@@ -291,7 +266,7 @@ class TestInitSchemaIdempotency:
     def test_schema_creates_both_tables(self):
         self.init_schema()
         tables = self.conn.execute(
-            "SELECT table_name FROM information_schema.tables WHERE table_schema = 'main'"
+            "SELECT name FROM sqlite_master WHERE type='table'"
         ).fetchall()
         table_names = {row[0] for row in tables}
         assert "products" in table_names

@@ -1,9 +1,10 @@
-import duckdb
+import sqlite3
 import pytest
 from unittest.mock import MagicMock, patch
 
 import src.db.connection as conn_mod
 from src.db.connection import close
+from src.db.schema import init_schema
 from src.enrichment.models import Enrichment
 from src.enrichment.factory import EnrichmentFactory
 from src.enrichment.pipeline import EnrichmentPipeline
@@ -25,35 +26,9 @@ def sample_llm_response():
 
 @pytest.fixture
 def db_conn():
-    conn = duckdb.connect(":memory:")
+    conn = sqlite3.connect(":memory:")
     conn_mod._local.connection = conn
-    conn.execute("""
-        CREATE TABLE products (
-            product_id BIGINT PRIMARY KEY,
-            product_type VARCHAR,
-            category VARCHAR,
-            product_tags VARCHAR,
-            images_array VARCHAR,
-            vendor VARCHAR,
-            inventory_quantity BIGINT,
-            gross_amount_exc_tax_product DOUBLE,
-            description VARCHAR
-        )
-    """)
-    conn.execute("CREATE SEQUENCE enrichissements_seq START 1")
-    conn.execute("""
-        CREATE TABLE enrichissements (
-            id BIGINT PRIMARY KEY DEFAULT nextval('enrichissements_seq'),
-            product_id BIGINT,
-            enriched_description VARCHAR,
-            material VARCHAR,
-            care_instructions VARCHAR,
-            style VARCHAR,
-            seo_keywords VARCHAR,
-            model_used VARCHAR,
-            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-        )
-    """)
+    init_schema()
     yield conn
     close()
 
