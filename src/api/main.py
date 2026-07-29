@@ -25,6 +25,7 @@ app = FastAPI(
 
 app.add_middleware(
     CORSMiddleware,
+    # localhost only — tighten to a single known origin before production deployment
     allow_origins=[
         "http://localhost:8501",
         "http://localhost:8000",
