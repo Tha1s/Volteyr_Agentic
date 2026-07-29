@@ -120,6 +120,62 @@ def test_search(sample_products):
     assert len(results) == 0
 
 
+def test_count_medium(sample_products):
+    repo = ProductRepository()
+    assert repo.count_medium() == 0
+
+
+def test_count_long(sample_products):
+    repo = ProductRepository()
+    assert repo.count_long() == 0
+
+
+def test_count_very_long(sample_products):
+    repo = ProductRepository()
+    assert repo.count_very_long() == 0
+
+
+def test_count_by_category(sample_products):
+    repo = ProductRepository()
+    cats = dict(repo.count_by_category())
+    assert cats["Robes & Jupes"] == 1
+    assert cats["Pantalons"] == 1
+    assert cats["Hauts"] == 1
+
+
+def test_count_by_vendor(sample_products):
+    repo = ProductRepository()
+    vendors = dict(repo.count_by_vendor())
+    assert vendors["Sandro"] == 1
+    assert vendors["Maje"] == 1
+    assert vendors["AMI"] == 1
+
+
+def test_get_distinct_categories(sample_products):
+    repo = ProductRepository()
+    cats = repo.get_distinct_categories()
+    assert "Robes & Jupes" in cats
+    assert "Pantalons" in cats
+    assert "Hauts" in cats
+
+
+def test_get_distinct_vendors(sample_products):
+    repo = ProductRepository()
+    vendors = repo.get_distinct_vendors()
+    assert "Sandro" in vendors
+    assert "Maje" in vendors
+    assert "AMI" in vendors
+
+
+def test_search_with_wildcards(sample_products):
+    repo = EnrichmentRepository()
+    repo.save(Enrichment(product_id=1, enriched_description="100% soie naturelle", model_used="test"))
+    results, total = repo.search(q="100%")
+    assert total == 1
+    results, total = repo.search(q="test_")
+    assert total == 0
+
+
 # T05: find_enriched_with_products edge cases
 
 

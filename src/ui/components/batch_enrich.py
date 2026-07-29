@@ -103,12 +103,14 @@ def _render_enrichment_progress() -> None:
     progress = shared.get("progress", 0.0)
     status_text = shared.get("status", "Enrichissement en cours...")
 
-    st.info("⚠️ L'enrichissement est en cours — ne changez pas de page.")
+    if status_text and status_text.startswith("Erreur"):
+        st.error(status_text)
+    else:
+        st.info("⚠️ L'enrichissement est en cours — ne changez pas de page.")
     st.progress(progress, text=status_text)
 
     if progress >= 1.0:
         st.session_state.enriching = False
         st.rerun()
 
-    time.sleep(1)
     st.rerun()

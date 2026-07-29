@@ -1,22 +1,30 @@
+import logging
+
 import streamlit as st
 import pandas as pd
 
 from src.db.product_repository import ProductRepository
 
+logger = logging.getLogger(__name__)
+
 
 @st.cache_data
 def _get_dashboard_stats(data_loaded: int):
     repo = ProductRepository()
-    total = repo.count_all()
-    empty = repo.count_empty()
-    short = repo.count_short(50)
-    medium = repo.count_medium()
-    long_ = repo.count_long()
-    very_long = repo.count_very_long()
-    categories = repo.count_by_category()
-    vendors = repo.count_by_vendor()
-    products = repo.find_all(100)
-    return total, empty, short, medium, long_, very_long, categories, vendors, products
+    try:
+        total = repo.count_all()
+        empty = repo.count_empty()
+        short = repo.count_short(50)
+        medium = repo.count_medium()
+        long_ = repo.count_long()
+        very_long = repo.count_very_long()
+        categories = repo.count_by_category()
+        vendors = repo.count_by_vendor()
+        products = repo.find_all(100)
+        return total, empty, short, medium, long_, very_long, categories, vendors, products
+    except Exception:
+        logger.exception("Erreur lors de la récupération des stats dashboard")
+        return 0, 0, 0, 0, 0, 0, [], [], []
 
 
 def show_dashboard():

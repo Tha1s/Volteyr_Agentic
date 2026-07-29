@@ -73,6 +73,14 @@ class TestHealth:
 
 
 class TestStats:
+    def test_stats_empty_db(self, api_client):
+        resp = api_client.get("/api/stats")
+        assert resp.status_code == 200
+        data = resp.json()
+        assert data["total_products"] == 0
+        assert data["empty_descriptions"] == 0
+        assert data["short_descriptions"] == 0
+
     def test_stats_with_data(self, api_client, sample_data):
         resp = api_client.get("/api/stats")
         assert resp.status_code == 200
@@ -85,6 +93,11 @@ class TestStats:
 
 
 class TestCategories:
+    def test_categories_empty_db(self, api_client):
+        resp = api_client.get("/api/categories")
+        assert resp.status_code == 200
+        assert resp.json() == {}
+
     def test_categories_returns_dict(self, api_client, sample_data):
         resp = api_client.get("/api/categories")
         assert resp.status_code == 200

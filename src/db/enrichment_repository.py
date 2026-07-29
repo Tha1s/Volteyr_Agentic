@@ -97,7 +97,7 @@ class EnrichmentRepository:
         params = []
 
         if q:
-            conditions.append("LOWER(e.enriched_description) LIKE LOWER(?)")
+            conditions.append("LOWER(e.enriched_description) LIKE LOWER(?) ESCAPE '\\'")
             escaped = q.replace("%", "\\%").replace("_", "\\_")
             params.append(f"%{escaped}%")
         if category:
