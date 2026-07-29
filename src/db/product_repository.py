@@ -37,14 +37,20 @@ class ProductRepository:
         return self._count_with(f"LENGTH(description) >= {DESC_QUALITY_LONG}")
 
     def count_by_category(self) -> list[tuple[str, int]]:
-        return self.conn.execute(
-            "SELECT category, COUNT(*) AS cnt FROM products GROUP BY category ORDER BY cnt DESC"
-        ).fetchall()
+        return [
+            tuple(row)
+            for row in self.conn.execute(
+                "SELECT category, COUNT(*) AS cnt FROM products GROUP BY category ORDER BY cnt DESC"
+            ).fetchall()
+        ]
 
     def count_by_vendor(self) -> list[tuple[str, int]]:
-        return self.conn.execute(
-            "SELECT vendor, COUNT(*) AS cnt FROM products GROUP BY vendor ORDER BY cnt DESC"
-        ).fetchall()
+        return [
+            tuple(row)
+            for row in self.conn.execute(
+                "SELECT vendor, COUNT(*) AS cnt FROM products GROUP BY vendor ORDER BY cnt DESC"
+            ).fetchall()
+        ]
 
     def find_all(self, limit: int = 100, offset: int = 0) -> list[dict]:
         return [
