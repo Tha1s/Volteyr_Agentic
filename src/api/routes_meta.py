@@ -1,14 +1,11 @@
 from fastapi import APIRouter, Depends
 
+from src.api.dependencies import get_product_repo
 from src.api.models import StatsResponse
 from src.db.product_repository import ProductRepository
 from src.llm.client import check_ollama
 
 router = APIRouter(prefix="/api")
-
-
-def get_product_repo() -> ProductRepository:
-    return ProductRepository()
 
 
 @router.get("/stats", response_model=StatsResponse)
