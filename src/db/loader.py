@@ -43,10 +43,8 @@ def load_csv_from_dictreader(reader: csv.DictReader) -> int:
         ))
 
     conn = get_connection()
-    conn.execute("DELETE FROM enrichissements")
-    conn.execute("DELETE FROM products")
     conn.executemany(
-        """INSERT INTO products (product_id, product_type, category, product_tags, images_array, vendor, inventory_quantity, gross_amount_exc_tax_product, description)
+        """INSERT OR REPLACE INTO products (product_id, product_type, category, product_tags, images_array, vendor, inventory_quantity, gross_amount_exc_tax_product, description)
            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)""",
         rows,
     )
